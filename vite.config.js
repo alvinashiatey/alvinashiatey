@@ -1,5 +1,4 @@
 import { defineConfig } from "vite";
-import legacy from "@vitejs/plugin-legacy";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 const { resolve } = require("path");
 
@@ -13,7 +12,6 @@ export default defineConfig({
     },
   },
   plugins: [
-    legacy(),
     nodeResolve({
       extensions: [".js", ".ts"],
     }),
