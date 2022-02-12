@@ -1,0 +1,15 @@
+header {
+  flex: 2;
+  height: auto;
+  color: var(--secondary-color);
+  padding-inline: var(--padding-m);
+  z-index: 20;
+  position: fixed;
+  mix-blend-mode: difference;
+  #header__icon {
+    cursor: pointer;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
