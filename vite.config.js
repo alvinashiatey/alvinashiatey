@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 const { resolve } = require("path");
+import legacy from "@vitejs/plugin-legacy";
 
 const root = resolve(__dirname, "src");
 
@@ -12,12 +13,13 @@ export default defineConfig({
     },
   },
   plugins: [
+    legacy(),
     nodeResolve({
       extensions: [".js", ".ts"],
     }),
   ],
   build: {
-    outDir: "dist",
+    outDir: "../dist",
     sourceMap: true,
     manifest: true,
     rollupOptions: {

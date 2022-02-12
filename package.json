@@ -12,6 +12,7 @@
     "vite": "^2.7.2"
   },
   "dependencies": {
-    "@glidejs/glide": "^3.5.2"
+    "@glidejs/glide": "^3.5.2",
+    "@vitejs/plugin-legacy": "^1.7.1"
   }
 }
