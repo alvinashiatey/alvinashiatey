@@ -1,5 +1,3 @@
-import Glide from "@glidejs/glide";
-
 const handleRevealInfo = (e) => {
   const headingButton = document.querySelector("#header__icon");
   headingButton.addEventListener("click", () => {
@@ -13,15 +11,7 @@ const handleRevealInfo = (e) => {
   });
 };
 
-const slideShowPortfolio = () => {
-  const gl = new Glide(".glide", {
-    type: "carousel",
-    perView: 1,
-    startAt: 0,
-    autoplay: 7000,
-  }).mount();
-  return gl;
-};
+
 
 const fecthPortfolio = () => {
   let channelSlug = "aa-portfolio";
@@ -47,9 +37,6 @@ const fecthPortfolio = () => {
         resolve("complete");
       });
     })
-    .then(() => {
-      slideShowPortfolio();
-    });
 };
 
 (() => {

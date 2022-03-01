@@ -5,11 +5,18 @@ header {
   padding-inline: var(--padding-m);
   z-index: 20;
   position: fixed;
-  mix-blend-mode: difference;
   #header__icon {
+    background: var(--primary-color);
+    display: inline-block;
     cursor: pointer;
     &:hover {
       text-decoration: underline;
+    }
+  }
+  .header__content {
+    p,
+    a {
+      background: var(--primary-color);
     }
   }
 }

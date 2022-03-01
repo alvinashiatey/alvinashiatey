@@ -1,0 +1,49 @@
+@use "./components/config";
+@use "./components/reset";
+@use "./components/typography";
+
+body {
+  font-family: OpenSans, sans-serif;
+  font-size: 16px;
+  color: var(--secondary-color);
+  max-width: 100vw;
+  height: 100vh;
+  background: var(--primary-color);
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  #aaa {
+    width: 100%;
+    height: 100vh;
+    overflow-y: scroll;
+    padding-right: 17px;
+    box-sizing: content-box;
+    .wrapper {
+      height: inherit;
+      position: relative;
+      padding-inline: var(--padding-m);
+      h1 {
+        font-size: 2rem;
+      }
+      main {
+        padding-block: 3rem;
+        width: 50rem;
+        display: flex;
+        flex-direction: column;
+        gap: 3rem;
+        h2 {
+          text-transform: uppercase;
+          letter-spacing: 0.05rem;
+          display: inline-block;
+          color: var(--primary-color);
+          background: var(--secondary-color);
+        }
+        section {
+          p + p {
+            margin-left: 2rem;
+          }
+        }
+      }
+    }
+  }
+}

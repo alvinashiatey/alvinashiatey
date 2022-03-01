@@ -1,30 +1,12 @@
 :root {
-  --primary-color: #000;
-  --secondary-color: #fefefe;
+  --primary-color: #bebebe;
+  --secondary-color: #000000;
   --primary-color-rgb: 227, 215, 193;
   --secondary-color-rgb: 0, 0, 0;
   --svg-perimeter: 2rem;
   --header-height: 8em;
   --padding-s: 0.5em;
   --padding-m: 1em;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --primary-color: #000;
-    --secondary-color: #fefefe;
-    --primary-color-rgb: 227, 215, 193;
-    --secondary-color-rgb: 0, 0, 0;
-  }
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --primary-color: #fefefe;
-    --secondary-color: #000;
-    --primary-color-rgb: 0, 0, 0;
-    --secondary-color-rgb: 227, 215, 193;
-  }
 }
 
 [hidden] {

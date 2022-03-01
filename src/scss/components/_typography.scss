@@ -17,3 +17,9 @@ a:active {
 a:hover {
   text-decoration: underline;
 }
+
+p,
+a {
+  font-size: 1.5rem;
+  font-variant-numeric: oldstyle-nums;
+}
