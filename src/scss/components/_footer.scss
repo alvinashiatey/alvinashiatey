@@ -6,5 +6,8 @@ footer {
   .contact__details {
     display: flex;
     justify-content: space-between;
+    a {
+      background: var(--primary-color);
+    }
   }
 }
