@@ -1,22 +1,8 @@
 header {
-  flex: 2;
   height: auto;
   color: var(--secondary-color);
-  padding-inline: var(--padding-m);
   z-index: 20;
-  position: fixed;
-  #header__icon {
-    background: var(--primary-color);
-    display: inline-block;
-    cursor: pointer;
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-  .header__content {
-    p,
-    a {
-      background: var(--primary-color);
-    }
+  #title {
+    padding-bottom: var(--padding-m);
   }
 }

@@ -1,0 +1,7 @@
+main {
+  .content {
+    p:nth-child(odd) {
+      padding-bottom: var(--padding-m);
+    }
+  }
+}

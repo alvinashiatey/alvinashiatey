@@ -1,2 +1,2 @@
 import "@/scss/main.scss";
-import "@/js/portfolio.js";
+import "@/js/lang.js";

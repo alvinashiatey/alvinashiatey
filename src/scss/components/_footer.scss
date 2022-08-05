@@ -1,13 +1,18 @@
 footer {
   position: fixed;
   bottom: 0;
-  width: 100%;
-  padding-inline: var(--padding-m);
-  .contact__details {
+  display: flex;
+  justify-content: space-between;
+  width: inherit;
+  .langs {
+    width: 100%;
     display: flex;
-    justify-content: space-between;
-    a {
-      background: var(--primary-color);
+    gap: 1rem;
+    .lng {
+      cursor: pointer;
+      &.select {
+        color: #bebebe;
+      }
     }
   }
 }
