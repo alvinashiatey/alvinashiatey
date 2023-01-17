@@ -10,6 +10,7 @@ async function handleData(){
     let data = localStorage.getItem('data')
     if (cache && data && !cacheIsExpired(cache)){
         data = JSON.parse(data)
+        renderSlider({data, container: ".slider"})
     } else {
         data = await fetchArena(SLUG)
         const result = {};
@@ -24,8 +25,8 @@ async function handleData(){
             })
         });
         localStorage.setItem('data', JSON.stringify(result))
+        renderSlider({result, container: "#sliders"})
     }
-    renderSlider({data, container: "#sliders"})
 }
 
 function renderSlider({data, container}){
