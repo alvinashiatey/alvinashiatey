@@ -12,6 +12,9 @@
       display: none;
       background-color: black;
       overflow: hidden;
+      @media screen and (max-width: 60em) {
+        height: 25rem;
+      }
       &.active {
         display: grid;
       }
@@ -19,9 +22,11 @@
         max-width: inherit;
         max-height: inherit;
         height: inherit;
-        //width: inherit;
-        //object-fit: contain;
-        //object-position: center;
+
+        @media screen and (max-width: 60em) {
+          width: inherit;
+          height: auto;
+        }
       }
     }
 

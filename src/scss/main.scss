@@ -29,7 +29,7 @@ body {
       height: 100%;
       @media screen and (max-width: 60em) {
         width: 100%;
-        padding-inline: var(--padding-l);
+        padding-inline: var(--padding-m);
         overflow-y: scroll;
       }
     }

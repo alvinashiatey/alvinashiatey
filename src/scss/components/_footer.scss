@@ -12,7 +12,7 @@ footer {
 
 
   .langs {
-  mix-blend-mode: difference;
+  //mix-blend-mode: difference;
     width: 100%;
     display: flex;
     gap: 1rem;
@@ -39,5 +39,10 @@ footer {
     @media screen and (max-width: 60em) {
       display: none;
     }
+  }
+  @media screen and (max-width: 60em) {
+    background: rgb(255,255,255);
+    background: linear-gradient(0deg, rgba(255,255,255,1) 62%, rgba(255,255,255,0) 100%);
+    padding-inline: var(--padding-m);
   }
 }
