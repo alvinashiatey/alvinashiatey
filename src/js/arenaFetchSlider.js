@@ -5,29 +5,30 @@ async function fetchArena(slug){
     return fetch(contentUrl).then(data => data.json())
 }
 
-async function handleData(){
-    const cache = localStorage.getItem('cache')
-    let data = localStorage.getItem('data')
-    if (cache && data && !cacheIsExpired(cache)){
-        data = JSON.parse(data)
-        renderSlider({data, container: ".slider"})
+async function handleData() {
+    const cache = localStorage.getItem('cache');
+    let data = localStorage.getItem('data');
+    if (cache && data && !cacheIsExpired(cache)) {
+        data = JSON.parse(data);
     } else {
-        data = await fetchArena(SLUG)
-        const result = {};
-        localStorage.setItem('cache', new Date().toLocaleString());
-        data.contents.forEach((content) => {
+        data = await fetchArena(SLUG);
+        const result = data.contents.reduce((acc, content) => {
             const key = content.title.split("_")[0];
-            result[key] = result[key] || [];
-            result[key].push({
+            acc[key] = acc[key] || [];
+            acc[key].push({
                 title: content.title,
                 description: content["description_html"],
                 image: content.image.original.url
-            })
-        });
-        localStorage.setItem('data', JSON.stringify(result))
-        renderSlider({result, container: "#sliders"})
+            });
+            return acc;
+        }, {});
+        localStorage.setItem('cache', new Date().toLocaleString());
+        localStorage.setItem('data', JSON.stringify(result));
+        data = result;
     }
+    renderSlider({ data, container: "#sliders" });
 }
+
 
 function renderSlider({data, container}){
     const slider = document.querySelector(container)
