@@ -1,8 +1,16 @@
 footer {
   position: fixed;
   bottom: 0;
-  width: inherit;
   padding-bottom: var(--padding-m);
+  padding-inline: var(--padding-m);
+  display: flex;
+  justify-content: space-between;
+  left: 0;
+  right: 0;
+  margin-left: auto;
+  margin-right: auto;
+
+
   .langs {
   mix-blend-mode: difference;
     width: 100%;

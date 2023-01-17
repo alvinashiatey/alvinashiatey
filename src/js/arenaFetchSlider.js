@@ -30,8 +30,10 @@ async function handleData(){
 
 function renderSlider({data, container}){
     const slider = document.querySelector(container)
+    let idx = 0
     if (!slider) return
     for (let key in data){
+            idx++
             const div = document.createElement('div')
             div.classList.add("slider__container")
             const ul = document.createElement('ul')
@@ -43,9 +45,11 @@ function renderSlider({data, container}){
             total: data[key].length
             })
             handleSlider({slides: images, countContainer: info.count.element})
+            sliderNav({key, container: ".nav__items", text: idx.toString(), slideContainer: slider})
             ul.append(...images)
             div.append(ul)
             div.append(info.infoWrapper.element)
+            div.id = key
             slider.append(div)
     }
 }
@@ -62,6 +66,23 @@ function listSlides(data){
         li.appendChild(imgEl)
         return li
     })
+}
+
+function sliderNav({key, container, text, slideContainer}){
+    const nav = document.querySelector(container)
+    if (!nav) return
+    const li = document.createElement('li')
+    li.classList.add("nav__item")
+    li.innerText = text
+    li.addEventListener('click', () => {
+        slideContainer.scrollTo({
+            top: document.getElementById(key).offsetTop,
+            left: 0,
+            behavior: 'smooth'
+        })
+    })
+
+    nav.appendChild(li)
 }
 
 function slideInfoElements({title, description, total}){
