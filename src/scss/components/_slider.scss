@@ -22,11 +22,8 @@
         max-width: inherit;
         max-height: inherit;
         height: inherit;
-
-        @media screen and (max-width: 60em) {
-          width: inherit;
-          height: auto;
-        }
+        width: inherit;
+        object-fit: contain;
       }
     }
 
