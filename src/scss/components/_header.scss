@@ -1,8 +1,6 @@
 header {
-  height: auto;
+  height: var(--m);
   color: var(--secondary-color);
   z-index: 20;
-  #title {
-    padding-bottom: var(--padding-m);
-  }
+  padding-block: var(--padding-m);
 }

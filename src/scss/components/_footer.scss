@@ -1,10 +1,10 @@
 footer {
   position: fixed;
   bottom: 0;
-  display: flex;
-  justify-content: space-between;
   width: inherit;
+  padding-bottom: var(--padding-m);
   .langs {
+  mix-blend-mode: difference;
     width: 100%;
     display: flex;
     gap: 1rem;
@@ -12,6 +12,20 @@ footer {
       cursor: pointer;
       &.select {
         color: #bebebe;
+      }
+    }
+  }
+  .portfolio__nav{
+    .nav{
+      ul {
+        display: flex;
+        gap: 1rem;
+        .nav__item {
+          cursor: pointer;
+          &.select {
+            color: #bebebe;
+          }
+        }
       }
     }
   }

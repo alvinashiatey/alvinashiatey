@@ -1,13 +1,20 @@
 :root {
+  font-family: Inter, Helvetica, Arial, sans-serif;
+  font-weight: 300;
+  font-size: 16px;
+
+  //variables
   --primary-color: #fefefe;
   --secondary-color: #181818;
   --primary-color-rgb: 227, 215, 193;
   --secondary-color-rgb: 0, 0, 0;
   --svg-perimeter: 2rem;
   --header-height: 8em;
-  --padding-s: 0.5em;
-  --padding-m: 1em;
-  --padding-l: 2em;
+  --padding-s: 0.5rem;
+  --padding-m: 1rem;
+  --padding-l: 2rem;
+  --m: 4rem;
+
 }
 
 [hidden] {
