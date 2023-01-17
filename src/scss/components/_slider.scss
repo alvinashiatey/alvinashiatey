@@ -10,19 +10,18 @@
       flex: 1;
       place-content: center;
       display: none;
-      @media screen and (max-width: 60em) {
-        height: max-content;
-      }
+      background-color: black;
+      overflow: hidden;
       &.active {
         display: grid;
       }
       img {
         max-width: inherit;
         max-height: inherit;
-        //height: inherit;
-        width: inherit;
-        object-fit: contain;
-        object-position: top;
+        height: inherit;
+        //width: inherit;
+        //object-fit: contain;
+        //object-position: center;
       }
     }
 
