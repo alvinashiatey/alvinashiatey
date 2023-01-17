@@ -8,8 +8,9 @@
       width: 100%;
       height: 40rem;
       flex: 1;
-      place-content: end;
+      place-content: center;
       display: none;
+      background-color: black;
       @media screen and (max-width: 60em) {
         height: max-content;
       }
