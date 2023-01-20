@@ -26,15 +26,14 @@ main {
         width: 100%;
         height: 100%;
         overflow-y: scroll;
-        padding-right: 17px; /* Increase/decrease this value for cross-browser compatibility */
+        padding-right: var(--scroll-bar-offset); /* Increase/decrease this value for cross-browser compatibility */
         box-sizing: content-box; /* So the width will be 100% + 17px */
         display: flex;
         flex-direction: column;
-        gap: var(--padding-m);
+        gap: calc(var(--padding-l) * 1.5);
         &> :last-child{
           padding-bottom: calc(var(--padding-l) * 3);
         }
-
 
         .project {
           background: var(--secondary-color);
