@@ -12,6 +12,8 @@
       display: none;
       background-color: black;
       overflow: hidden;
+      cursor: pointer;
+
       @media screen and (max-width: 60em) {
         height: 25rem;
       }
@@ -32,5 +34,8 @@
     display: flex;
     justify-content: space-between;
     padding-block: var(--padding-s);
+    .slide__title{
+     text-transform: uppercase;
+    }
   }
 }

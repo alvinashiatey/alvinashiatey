@@ -1,7 +1,7 @@
 const SLUG = "aa-portfolio"
 async function fetchArena(slug){
     const randomString = Math.random().toString(16).slice(2)
-    const contentUrl = `https://api.are.na/v2/channels/${slug}?sort=position&order=asc&per=100?nocache=${randomString}`
+    const contentUrl = `https://api.are.na/v2/channels/${slug}?sort=position&order=desc&per=100?nocache=${randomString}`
     return fetch(contentUrl).then(data => data.json())
 }
 
@@ -42,9 +42,9 @@ function renderSlider({data, container}){
             ul.classList.add("slides")
             const images = listSlides(data[key])
             const info = slideInfoElements({
-            title: key.toUpperCase(),
-            description: data[key][0].description,
-            total: data[key].length
+                title: key.replace(/-/g, " "),
+                description: data[key][0].description,
+                total: data[key].length
             })
             handleSlider({slides: images, countContainer: info.count.element})
             sliderNav({key, container: ".nav__items", text: idx.toString(), slideContainer: slider})
@@ -52,7 +52,7 @@ function renderSlider({data, container}){
             div.append(ul)
             div.append(info.infoWrapper.element)
             div.id = key
-            slider.append(div)
+            slider.prepend(div)
     }
 }
 
@@ -150,8 +150,6 @@ function handleSlider({slides, countContainer}){
     })
 }
 
-
-
 function cacheIsExpired(cacheDate){
     const now = new Date()
     const cache = new Date(cacheDate)
@@ -159,54 +157,6 @@ function cacheIsExpired(cacheDate){
     const minutes = Math.floor(diff / 1000 / 60)
     return minutes > 60 * 24
 }
-
-
-function getDominantColor(image) {
-    return new Promise((resolve, reject) => {
-        image.onload = function() {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = this.naturalWidth;
-            canvas.height = this.naturalHeight;
-            ctx.drawImage(this, 0, 0);
-
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const pixels = imageData.data;
-            const colorBuckets = {};
-
-            for (let i = 0; i < pixels.length; i += 4) {
-                const red = pixels[i];
-                const green = pixels[i + 1];
-                const blue = pixels[i + 2];
-                const alpha = pixels[i + 3];
-
-                if (alpha === 0) {
-                    continue;
-                }
-
-                const hex = `#${((1 << 24) + (red << 16) + (green << 8) + blue).toString(16).slice(1)}`;
-                if (!colorBuckets[hex]) {
-                    colorBuckets[hex] = 1;
-                } else {
-                    colorBuckets[hex] += 1;
-                }
-            }
-
-            let dominantColor = null;
-            let maxCount = 0;
-            for (const color in colorBuckets) {
-                if (colorBuckets[color] > maxCount) {
-                    maxCount = colorBuckets[color];
-                    dominantColor = color;
-                }
-            }
-
-            resolve(dominantColor);
-        };
-        image.onerror = reject;
-    });
-}
-
 
 window.onload = ()=>{
     handleData()
