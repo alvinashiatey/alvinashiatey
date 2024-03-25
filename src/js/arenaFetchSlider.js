@@ -29,7 +29,6 @@ async function handleData() {
     renderSlider({ data, container: "#sliders" });
 }
 
-
 function renderSlider({data, container}){
     const slider = document.querySelector(container)
     let idx = 0
@@ -159,5 +158,5 @@ function cacheIsExpired(cacheDate){
 }
 
 window.onload = ()=>{
-    handleData()
+    handleData().then()
 }
