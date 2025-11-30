@@ -11,9 +11,8 @@ footer {
   margin-left: auto;
   margin-right: auto;
 
-
   .langs {
-  //mix-blend-mode: difference;
+    //mix-blend-mode: difference;
     width: 100%;
     display: flex;
     gap: 1rem;
@@ -24,13 +23,33 @@ footer {
       }
     }
   }
-  .portfolio__nav{
-    .nav{
+  .portfolio__nav {
+    .nav {
       ul {
         display: flex;
         gap: 1rem;
         .nav__item {
           cursor: pointer;
+          position: relative;
+          transition: color 0.2s ease;
+
+          &::after {
+            content: "";
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background-color: currentColor;
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+          }
+
+          &.active::after {
+            transform: scaleX(1);
+          }
+
           &.select {
             color: #bebebe;
           }
@@ -42,8 +61,12 @@ footer {
     }
   }
   @media screen and (max-width: 60em) {
-    background: rgb(255,255,255);
-    background: linear-gradient(0deg, rgba(255,255,255,1) 62%, rgba(255,255,255,0) 100%);
+    background: rgb(255, 255, 255);
+    background: linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 1) 62%,
+      rgba(255, 255, 255, 0) 100%
+    );
     padding-inline: var(--padding-m);
   }
 }
