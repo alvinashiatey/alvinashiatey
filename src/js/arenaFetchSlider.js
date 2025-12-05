@@ -15,10 +15,17 @@ async function handleData() {
     const result = data.contents.reduce((acc, content) => {
       const key = content.title.split("_")[0];
       acc[key] = acc[key] || [];
+
+      const isVideo =
+        content.class === "Attachment" &&
+        content.attachment?.content_type?.startsWith("video/");
+
       acc[key].push({
         title: content.title,
         description: content["description_html"],
-        image: content.image.original.url,
+        image: content.image?.original?.url || null,
+        type: isVideo ? "video" : "image",
+        videoUrl: isVideo ? content.attachment.url : null,
       });
       return acc;
     }, {});
@@ -61,15 +68,31 @@ function renderSlider({ data, container }) {
 }
 
 function listSlides(data) {
-  return data.map((img, idx) => {
+  return data.map((item, idx) => {
     const li = document.createElement("li");
     li.classList.add("slide");
-    li.setAttribute("data-title", `${img.title.toLowerCase()}`);
+    li.setAttribute("data-title", `${item.title.toLowerCase()}`);
+    li.setAttribute("data-type", item.type);
     if (idx === 0) li.classList.add("active");
-    const imgEl = document.createElement("img");
-    imgEl.src = `${img.image}`;
-    imgEl.alt = `${img.title}`;
-    li.appendChild(imgEl);
+
+    if (item.type === "video") {
+      const videoEl = document.createElement("video");
+      videoEl.src = item.videoUrl;
+      videoEl.muted = true;
+      videoEl.loop = true;
+      videoEl.playsInline = true;
+      videoEl.preload = "metadata";
+      if (item.image) {
+        videoEl.poster = item.image;
+      }
+      li.appendChild(videoEl);
+    } else {
+      const imgEl = document.createElement("img");
+      imgEl.src = `${item.image}`;
+      imgEl.alt = `${item.title}`;
+      li.appendChild(imgEl);
+    }
+
     return li;
   });
 }
@@ -139,10 +162,29 @@ function handleSlider({ slides, countContainer }) {
   let count = 0;
   countContainer.innerText = `${current} / ${total}`;
 
+  function handleVideoPlayback(slide, shouldPlay) {
+    const video = slide.querySelector("video");
+    if (video) {
+      if (shouldPlay) {
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+        video.currentTime = 0;
+      }
+    }
+  }
+
   function updateActiveSlide(offset) {
+    // Pause video on current slide
+    handleVideoPlayback(slides[count], false);
+
     slides[count].classList.remove("active");
     count = (count + offset + slideCount) % slideCount;
     slides[count].classList.add("active");
+
+    // Play video on new active slide
+    handleVideoPlayback(slides[count], true);
+
     current = (count + 1).toString();
     total = slideCount;
     countContainer.innerText = `${current} / ${total}`;
@@ -151,6 +193,9 @@ function handleSlider({ slides, countContainer }) {
   function nextSlide() {
     updateActiveSlide(1);
   }
+
+  // Play video on first active slide if it's a video
+  handleVideoPlayback(slides[0], true);
 
   slides.forEach((slide) => {
     slide.addEventListener("click", nextSlide);
