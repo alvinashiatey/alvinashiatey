@@ -8,11 +8,12 @@
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^13.3.0",
-    "sass": "^1.89.0",
+    "sass": "^1.97.3",
     "vite": "^2.9.18"
   },
   "dependencies": {
     "@glidejs/glide": "^3.7.1",
-    "@vitejs/plugin-legacy": "^1.8.2"
+    "@vitejs/plugin-legacy": "^1.8.2",
+    "html2canvas": "^1.4.1"
   }
 }

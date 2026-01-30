@@ -1,0 +1,225 @@
+// Poster Generator Styles
+// Importing shared components for consistency
+
+@use "components/reset";
+@use "components/config";
+@use "components/typography";
+
+#poster-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--primary-color);
+  color: var(--secondary-color);
+}
+
+header {
+  padding: var(--padding-s);
+  border-bottom: 1px solid var(--secondary-color);
+
+  nav {
+    a {
+      font-size: 0.875rem;
+    }
+  }
+}
+
+main {
+  flex: 1;
+  padding: var(--padding-l);
+}
+
+.poster-container {
+  // Color variables - updated via JavaScript
+  --poster-heading-color: #ff48b0;
+  --poster-body-color: #0078bf;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  max-width: 40vw;
+  margin: 0 auto;
+  font-size: 1.7rem;
+  line-height: 1.2;
+  background-color: #fefefe;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: var(--padding-l);
+  aspect-ratio: 8.5 / 11; // US Letter size
+
+  // Shared styles for clean text inputs
+  input,
+  textarea {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    resize: none;
+
+    &::placeholder {
+      color: inherit;
+      opacity: 0.5;
+    }
+  }
+
+  .heading-group {
+    color: var(--poster-heading-color);
+
+    hr {
+      border: 1.25px solid var(--poster-heading-color);
+      opacity: 0.8;
+      margin-top: 0.5em;
+    }
+  }
+
+  .subheading-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    .close-btn {
+      position: absolute;
+      right: 0;
+      width: 1.2em;
+      height: 1.2em;
+      padding: 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+
+      &::before,
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background-color: currentColor;
+      }
+
+      &::before {
+        transform: translate(-50%, -50%) rotate(45deg);
+      }
+
+      &::after {
+        transform: translate(-50%, -50%) rotate(-45deg);
+      }
+    }
+
+    &:hover .close-btn {
+      opacity: 0.5;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+
+    &.hidden {
+      display: none;
+    }
+  }
+
+  .subheading {
+    opacity: 0.8;
+  }
+
+  .body-text {
+    flex: 1;
+    color: var(--poster-body-color);
+  }
+  .contact {
+    opacity: 0.8;
+    color: var(--poster-body-color);
+  }
+}
+
+.button__container {
+  position: fixed;
+  top: 90%;
+  left: calc(
+    50% + 20vw + var(--padding-l)
+  ); // Center + half poster width + padding
+  transform: translateY(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--padding-s);
+
+  @media (max-width: 768px) {
+    position: fixed;
+    top: auto;
+    bottom: var(--padding-l);
+    left: 50%;
+    transform: translateX(-50%);
+    flex-direction: row;
+  }
+
+  button {
+    padding: var(--padding-s) var(--padding-l);
+    background: var(--secondary-color);
+    color: var(--primary-color);
+    border: none;
+    font-family: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: filter 0.2s ease;
+
+    &:hover {
+      filter: invert(100%) brightness(0.8);
+    }
+  }
+}
+
+// Print styles - only show the poster
+@media print {
+  @page {
+    size: letter;
+    margin: 0;
+  }
+
+  html,
+  body {
+    width: 8.5in;
+    height: 11in;
+    margin: 0;
+    padding: 0;
+  }
+
+  #poster-app {
+    min-height: auto;
+    background: none;
+  }
+
+  main {
+    padding: 0;
+  }
+
+  .poster-container {
+    max-width: 100%;
+    width: 8.5in;
+    height: 11in;
+    margin: 0;
+    box-shadow: none;
+    aspect-ratio: auto;
+    font-size: 27pt; // Equivalent to 1.7rem at 16px base
+    padding: 0.5in;
+
+    // Hide close buttons in print
+    .close-btn {
+      display: none !important;
+    }
+  }
+
+  // Hide save button when printing
+  .button__container {
+    display: none !important;
+  }
+}

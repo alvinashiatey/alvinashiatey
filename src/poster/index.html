@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="/favicon.svg" type="image/x-icon" />
+    <title>Poster Generator | Alvin Ashiatey</title>
+  </head>
+
+  <body>
+    <div id="poster-app">
+      <main role="main" aria-label="Poster Generator">
+        <div
+          class="poster-container"
+          role="form"
+          aria-label="Poster content editor"
+        >
+          <div class="heading-group">
+            <input
+              type="text"
+              class="heading"
+              value="Opportunities"
+              maxlength="100"
+              aria-label="Poster heading"
+            />
+            <div class="subheading-wrapper">
+              <input
+                type="text"
+                class="subheading"
+                value="Subheading"
+                maxlength="100"
+                aria-label="Poster subheading"
+              />
+              <button
+                type="button"
+                class="close-btn"
+                aria-label="Remove subheading"
+              ></button>
+            </div>
+            <hr aria-hidden="true" />
+          </div>
+          <br />
+          <textarea
+            class="body-text"
+            id="poster-text"
+            placeholder="Click here to include text..."
+            aria-label="Poster body text, maximum 100 words"
+            maxlength="500"
+          ></textarea>
+          <input
+            type="text"
+            class="contact"
+            placeholder="E-mail"
+            maxlength="100"
+            aria-label="Contact information"
+          />
+        </div>
+      </main>
+    </div>
+
+    <div class="button__container">
+      <button type="button" id="randomize-btn" aria-label="Randomize colors">
+        Randomize
+      </button>
+      <button type="button" id="generate-poster-btn">Save</button>
+    </div>
+
+    <script type="module" src="./poster.js"></script>
+  </body>
+</html>

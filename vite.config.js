@@ -25,6 +25,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(root, "index.html"),
+        poster: resolve(root, "poster", "index.html"),
         // resume: resolve(root, "resume", "index.html"),
       },
     },
