@@ -13,7 +13,7 @@ const COLOR_PAIRS = [
   ["#06d6a0", "#ef476f"], // Mint & Pink
   ["#8338ec", "#ff006e"], // Violet & Magenta
   ["#3a86ff", "#fb5607"], // Blue & Orange
-  ["#181818", "#181818"], // Monochrome Black
+  ["#181818", "#FFB511"], // Black & Sunflower
   ["#9b5de5", "#00bbf9"], // Lavender & Cyan
 ];
 

@@ -1,14 +1,10 @@
 import * as THREE from "three";
-import { WebGPURenderer, MeshBasicNodeMaterial } from "three/webgpu";
-import { texture, uv, float, vec4, Fn } from "three/tsl";
+import { WebGPURenderer } from "three/webgpu";
 
 /**
- * Image Handler with Three.js TSL Dithering
- * Creates a dithered black & white background for the poster
+ * Image Handler with Floyd-Steinberg Dithering
+ * Creates a dithered background for the poster using error diffusion
  */
-
-// Bayer 4x4 dithering matrix
-const BAYER_MATRIX = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 
 export class DitheredImageHandler {
   constructor(canvasElement) {
@@ -48,81 +44,116 @@ export class DitheredImageHandler {
     this.isInitialized = true;
   }
 
-  // TSL dithering shader
-  createDitherMaterial(
-    imageTexture,
-    ditherColor = { r: 0, g: 0, b: 0 },
-    ditherScale = 2.0,
-  ) {
-    // Create a data texture for the Bayer matrix
-    const bayerData = new Float32Array(16);
-    for (let i = 0; i < 16; i++) {
-      bayerData[i] = BAYER_MATRIX[i] / 16.0;
+  /**
+   * Floyd-Steinberg dithering on CPU
+   * Returns a canvas with the dithered image
+   */
+  applyFloydSteinberg(img, color = { r: 0, g: 0, b: 0 }, scale = 1) {
+    // Create a smaller canvas for pixelated effect (scale controls dot size)
+    const targetWidth = Math.ceil(img.width / scale);
+    const targetHeight = Math.ceil(img.height / scale);
+
+    // Work canvas at reduced size
+    const workCanvas = document.createElement("canvas");
+    workCanvas.width = targetWidth;
+    workCanvas.height = targetHeight;
+    const workCtx = workCanvas.getContext("2d", { willReadFrequently: true });
+
+    // Draw image scaled down
+    workCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
+    const imageData = workCtx.getImageData(0, 0, targetWidth, targetHeight);
+    const data = imageData.data;
+
+    // Floyd-Steinberg error diffusion
+    for (let y = 0; y < targetHeight; y++) {
+      for (let x = 0; x < targetWidth; x++) {
+        const idx = (y * targetWidth + x) * 4;
+
+        // Get grayscale value using luminance
+        const oldGray =
+          data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114;
+
+        // Quantize to black or white
+        const newGray = oldGray > 127 ? 255 : 0;
+        const error = oldGray - newGray;
+
+        // Set pixel - use color for dark pixels, transparent for light
+        if (newGray === 0) {
+          // Dark pixel - use the dither color
+          data[idx] = color.r * 255;
+          data[idx + 1] = color.g * 255;
+          data[idx + 2] = color.b * 255;
+          data[idx + 3] = 255;
+        } else {
+          // Light pixel - make transparent
+          data[idx] = 255;
+          data[idx + 1] = 255;
+          data[idx + 2] = 255;
+          data[idx + 3] = 0;
+        }
+
+        // Distribute error to neighboring pixels (Floyd-Steinberg coefficients)
+        // Right pixel: 7/16
+        if (x + 1 < targetWidth) {
+          const rightIdx = (y * targetWidth + x + 1) * 4;
+          this.addError(data, rightIdx, error, 7 / 16);
+        }
+
+        // Bottom-left pixel: 3/16
+        if (x - 1 >= 0 && y + 1 < targetHeight) {
+          const blIdx = ((y + 1) * targetWidth + x - 1) * 4;
+          this.addError(data, blIdx, error, 3 / 16);
+        }
+
+        // Bottom pixel: 5/16
+        if (y + 1 < targetHeight) {
+          const bottomIdx = ((y + 1) * targetWidth + x) * 4;
+          this.addError(data, bottomIdx, error, 5 / 16);
+        }
+
+        // Bottom-right pixel: 1/16
+        if (x + 1 < targetWidth && y + 1 < targetHeight) {
+          const brIdx = ((y + 1) * targetWidth + x + 1) * 4;
+          this.addError(data, brIdx, error, 1 / 16);
+        }
+      }
     }
-    const bayerTexture = new THREE.DataTexture(
-      bayerData,
-      4,
-      4,
-      THREE.RedFormat,
-      THREE.FloatType,
-    );
-    bayerTexture.needsUpdate = true;
 
-    // Normalize color values to 0-1 range
-    const colorR = float(ditherColor.r);
-    const colorG = float(ditherColor.g);
-    const colorB = float(ditherColor.b);
+    // Put processed data back
+    workCtx.putImageData(imageData, 0, 0);
 
-    // Dither pattern scale (larger = bigger dots)
-    const patternScale = float(ditherScale);
+    // Create output canvas at original size with nearest-neighbor scaling
+    const outputCanvas = document.createElement("canvas");
+    outputCanvas.width = img.width;
+    outputCanvas.height = img.height;
+    const outputCtx = outputCanvas.getContext("2d");
 
-    // TSL shader for ordered dithering
-    const ditherShader = Fn(() => {
-      const texColor = texture(imageTexture, uv());
+    // Use nearest-neighbor for crisp pixels
+    outputCtx.imageSmoothingEnabled = false;
+    outputCtx.drawImage(workCanvas, 0, 0, img.width, img.height);
 
-      // Convert to grayscale using luminance weights
-      const gray = texColor.r
-        .mul(0.299)
-        .add(texColor.g.mul(0.587))
-        .add(texColor.b.mul(0.114));
+    return outputCanvas;
+  }
 
-      // Get pixel position for dithering pattern (scaled for dot size)
-      const pixelX = uv()
-        .x.mul(float(this.canvas.clientWidth))
-        .div(patternScale);
-      const pixelY = uv()
-        .y.mul(float(this.canvas.clientHeight))
-        .div(patternScale);
+  // Helper to add error to a pixel's RGB values
+  addError(data, idx, error, factor) {
+    const adjustment = error * factor;
+    // Add to all RGB channels (they should be same for grayscale input)
+    data[idx] = Math.max(0, Math.min(255, data[idx] + adjustment));
+    data[idx + 1] = Math.max(0, Math.min(255, data[idx + 1] + adjustment));
+    data[idx + 2] = Math.max(0, Math.min(255, data[idx + 2] + adjustment));
+  }
 
-      // Calculate Bayer matrix index
-      const ditherX = pixelX.mod(4.0).floor();
-      const ditherY = pixelY.mod(4.0).floor();
-      const ditherIndex = ditherY.mul(4.0).add(ditherX);
-
-      // Sample Bayer threshold from texture
-      const bayerUV = vec4(
-        ditherX.add(0.5).div(4.0),
-        ditherY.add(0.5).div(4.0),
-        0,
-        0,
-      );
-      const threshold = texture(bayerTexture, bayerUV.xy).r;
-
-      // Apply dithering: compare gray value with threshold
-      // Use heading color for dark pixels, transparent for light
-      const isDark = gray.greaterThan(threshold);
-      const outR = isDark.select(float(1.0), colorR);
-      const outG = isDark.select(float(1.0), colorG);
-      const outB = isDark.select(float(1.0), colorB);
-      const outA = isDark.select(float(0.0), float(1.0));
-
-      return vec4(outR, outG, outB, outA);
-    });
-
-    return new MeshBasicNodeMaterial({
-      colorNode: ditherShader(),
-      transparent: true,
-    });
+  /**
+   * Create a Three.js texture from the dithered canvas
+   */
+  createDitheredTexture(img, color, scale) {
+    const ditheredCanvas = this.applyFloydSteinberg(img, color, scale);
+    const texture = new THREE.CanvasTexture(ditheredCanvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.minFilter = THREE.NearestFilter;
+    texture.magFilter = THREE.NearestFilter;
+    return texture;
   }
 
   async loadImage(file, ditherColor = { r: 0, g: 0, b: 0 }) {
@@ -133,74 +164,86 @@ export class DitheredImageHandler {
         try {
           await this.init();
 
-          // Load texture
-          const loader = new THREE.TextureLoader();
-          this.imageTexture = await loader.loadAsync(e.target.result);
-          this.imageTexture.colorSpace = THREE.SRGBColorSpace;
+          // Load original image (need to keep it for re-dithering)
+          const img = new Image();
+          img.onload = async () => {
+            this.originalImage = img;
 
-          // Calculate aspect ratio to fit within the canvas (contain)
-          const imgAspect =
-            this.imageTexture.image.width / this.imageTexture.image.height;
-          const canvasAspect =
-            this.canvas.clientWidth / this.canvas.clientHeight;
+            // Calculate aspect ratio to fit within the canvas (contain)
+            const imgAspect = img.width / img.height;
+            const canvasAspect =
+              this.canvas.clientWidth / this.canvas.clientHeight;
 
-          // Calculate the visible height at the plane's position (z=0)
-          // Using: visibleHeight = 2 * tan(fov/2) * distance
-          const vFov = (this.fov * Math.PI) / 180;
-          const visibleHeight = 2 * Math.tan(vFov / 2) * this.cameraZ;
-          const visibleWidth = visibleHeight * canvasAspect;
+            // Calculate the visible height at the plane's position (z=0)
+            // Using: visibleHeight = 2 * tan(fov/2) * distance
+            const vFov = (this.fov * Math.PI) / 180;
+            const visibleHeight = 2 * Math.tan(vFov / 2) * this.cameraZ;
+            const visibleWidth = visibleHeight * canvasAspect;
 
-          // Calculate plane dimensions to fit within visible area
-          let planeWidth, planeHeight;
+            // Calculate plane dimensions to fit within visible area
+            let planeWidth, planeHeight;
 
-          if (imgAspect > canvasAspect) {
-            // Image is wider - fit to width
-            planeWidth = visibleWidth;
-            planeHeight = visibleWidth / imgAspect;
-          } else {
-            // Image is taller - fit to height
-            planeHeight = visibleHeight;
-            planeWidth = visibleHeight * imgAspect;
-          }
+            if (imgAspect > canvasAspect) {
+              // Image is wider - fit to width
+              planeWidth = visibleWidth;
+              planeHeight = visibleWidth / imgAspect;
+            } else {
+              // Image is taller - fit to height
+              planeHeight = visibleHeight;
+              planeWidth = visibleHeight * imgAspect;
+            }
 
-          // Scale factor to leave padding and account for rotation
-          const scaleFactor = 0.6;
+            // Scale factor to leave padding and account for rotation
+            const scaleFactor = 0.6;
 
-          // Create plane geometry
-          const geometry = new THREE.PlaneGeometry(
-            planeWidth * scaleFactor,
-            planeHeight * scaleFactor,
-          );
+            // Create plane geometry
+            const geometry = new THREE.PlaneGeometry(
+              planeWidth * scaleFactor,
+              planeHeight * scaleFactor,
+            );
 
-          // Random dither dot scale (between 1 and 4 for variety)
-          this.currentDitherScale = 1 + Math.random() * 3;
+            // Random dither dot scale (between 1 and 4 for variety)
+            this.currentDitherScale = 1 + Math.random() * 3;
 
-          // Create dithered material
-          const material = this.createDitherMaterial(
-            this.imageTexture,
-            this.currentColor,
-            this.currentDitherScale,
-          );
+            // Create Floyd-Steinberg dithered texture
+            const ditheredTexture = this.createDitheredTexture(
+              img,
+              this.currentColor,
+              this.currentDitherScale,
+            );
 
-          // Remove existing mesh if any
-          if (this.mesh) {
-            this.scene.remove(this.mesh);
-            this.mesh.geometry.dispose();
-          }
+            // Simple material with dithered texture
+            const material = new THREE.MeshBasicMaterial({
+              map: ditheredTexture,
+              transparent: true,
+            });
 
-          this.mesh = new THREE.Mesh(geometry, material);
+            // Remove existing mesh if any
+            if (this.mesh) {
+              this.scene.remove(this.mesh);
+              this.mesh.geometry.dispose();
+              if (this.mesh.material.map) {
+                this.mesh.material.map.dispose();
+              }
+              this.mesh.material.dispose();
+            }
 
-          // Add random rotation on all axes for dynamism
-          this.mesh.rotation.x = (Math.random() - 0.5) * 0.3; // Random X rotation
-          this.mesh.rotation.y = (Math.random() - 0.5) * 0.3; // Random Y rotation
-          this.mesh.rotation.z = (Math.random() - 0.5) * 0.3; // Random Z rotation
+            this.mesh = new THREE.Mesh(geometry, material);
 
-          this.scene.add(this.mesh);
+            // Add random rotation on all axes for dynamism
+            this.mesh.rotation.x = (Math.random() - 0.5) * 0.3;
+            this.mesh.rotation.y = (Math.random() - 0.5) * 0.3;
+            this.mesh.rotation.z = (Math.random() - 0.5) * 0.3;
 
-          // Render
-          this.render();
+            this.scene.add(this.mesh);
 
-          resolve();
+            // Render
+            this.render();
+
+            resolve();
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
         } catch (error) {
           reject(error);
         }
@@ -218,27 +261,35 @@ export class DitheredImageHandler {
 
   // Update the dither color and re-render
   updateColor(ditherColor) {
-    if (!this.mesh || !this.imageTexture) return;
+    if (!this.mesh || !this.originalImage) return;
 
     this.currentColor = ditherColor;
 
-    // Dispose old material
+    // Dispose old texture and material
+    if (this.mesh.material.map) {
+      this.mesh.material.map.dispose();
+    }
     if (this.mesh.material) {
       this.mesh.material.dispose();
     }
 
-    // Create new material with updated color (keep same dither scale)
-    this.mesh.material = this.createDitherMaterial(
-      this.imageTexture,
+    // Create new dithered texture with updated color (keep same dither scale)
+    const ditheredTexture = this.createDitheredTexture(
+      this.originalImage,
       ditherColor,
       this.currentDitherScale || 1.0,
     );
+
+    this.mesh.material = new THREE.MeshBasicMaterial({
+      map: ditheredTexture,
+      transparent: true,
+    });
     this.render();
   }
 
   // Randomize rotation and dither scale
   randomize(ditherColor) {
-    if (!this.mesh || !this.imageTexture) return;
+    if (!this.mesh || !this.originalImage) return;
 
     this.currentColor = ditherColor;
 
@@ -250,17 +301,25 @@ export class DitheredImageHandler {
     // Randomize dither scale
     this.currentDitherScale = 1 + Math.random() * 3;
 
-    // Dispose old material
+    // Dispose old texture and material
+    if (this.mesh.material.map) {
+      this.mesh.material.map.dispose();
+    }
     if (this.mesh.material) {
       this.mesh.material.dispose();
     }
 
-    // Create new material with updated color and new dither scale
-    this.mesh.material = this.createDitherMaterial(
-      this.imageTexture,
+    // Create new dithered texture with updated color and new dither scale
+    const ditheredTexture = this.createDitheredTexture(
+      this.originalImage,
       ditherColor,
       this.currentDitherScale,
     );
+
+    this.mesh.material = new THREE.MeshBasicMaterial({
+      map: ditheredTexture,
+      transparent: true,
+    });
     this.render();
   }
 
@@ -282,13 +341,15 @@ export class DitheredImageHandler {
     if (this.mesh) {
       this.scene.remove(this.mesh);
       this.mesh.geometry.dispose();
+      if (this.mesh.material.map) {
+        this.mesh.material.map.dispose();
+      }
+      this.mesh.material.dispose();
       this.mesh = null;
     }
 
-    if (this.imageTexture) {
-      this.imageTexture.dispose();
-      this.imageTexture = null;
-    }
+    // Clear original image reference
+    this.originalImage = null;
 
     if (this.renderer) {
       this.renderer.clear();
