@@ -1,4 +1,5 @@
 import "../scss/poster.scss";
+import { DitheredImageHandler } from "./imageHandler.js";
 
 const MAX_WORDS = 100;
 
@@ -22,6 +23,12 @@ const closeBtn = document.querySelector(".subheading-wrapper .close-btn");
 const saveBtn = document.getElementById("generate-poster-btn");
 const randomizeBtn = document.getElementById("randomize-btn");
 const posterContainer = document.querySelector(".poster-container");
+const imageUpload = document.getElementById("image-upload");
+const clearImageBtn = document.getElementById("clear-image-btn");
+const backgroundCanvas = document.getElementById("background-canvas");
+
+// Initialize dithered image handler
+let imageHandler = null;
 
 // Apply color pair by updating CSS custom properties
 function applyColorPair(headingColor, bodyColor) {
@@ -40,6 +47,68 @@ randomizeBtn.addEventListener("click", () => {
   lastColorIndex = newIndex;
   const [headingColor, bodyColor] = COLOR_PAIRS[newIndex];
   applyColorPair(headingColor, bodyColor);
+
+  // Randomize dithered image (color, rotation, and dither scale)
+  if (imageHandler) {
+    imageHandler.randomize(hexToRgb(headingColor));
+  }
+});
+
+// Helper to parse hex color to RGB object (0-1 range)
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16) / 255,
+        g: parseInt(result[2], 16) / 255,
+        b: parseInt(result[3], 16) / 255,
+      }
+    : { r: 0, g: 0, b: 0 };
+}
+
+// Get current heading color
+function getCurrentHeadingColor() {
+  const colorValue = getComputedStyle(posterContainer)
+    .getPropertyValue("--poster-heading-color")
+    .trim();
+  return hexToRgb(colorValue);
+}
+
+// Handle image upload
+imageUpload.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  try {
+    if (!imageHandler) {
+      imageHandler = new DitheredImageHandler(backgroundCanvas);
+    }
+
+    const headingColor = getCurrentHeadingColor();
+    await imageHandler.loadImage(file, headingColor);
+    backgroundCanvas.classList.add("visible");
+    clearImageBtn.hidden = false;
+  } catch (error) {
+    console.error("Error loading image:", error);
+    alert("Error loading image. Please try another file.");
+  }
+});
+
+// Clear image
+clearImageBtn.addEventListener("click", () => {
+  if (imageHandler) {
+    imageHandler.clear();
+  }
+  backgroundCanvas.classList.remove("visible");
+  clearImageBtn.hidden = true;
+  imageUpload.value = "";
+});
+
+// Handle window resize
+window.addEventListener("resize", () => {
+  if (imageHandler) {
+    imageHandler.resize();
+  }
 });
 
 // Word count helper

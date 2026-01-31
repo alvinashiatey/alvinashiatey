@@ -34,6 +34,7 @@ main {
   --poster-heading-color: #ff48b0;
   --poster-body-color: #0078bf;
 
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -45,6 +46,32 @@ main {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   padding: var(--padding-l);
   aspect-ratio: 8.5 / 11; // US Letter size
+  overflow: hidden;
+
+  #background-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 0;
+
+    &.visible {
+      opacity: 1;
+    }
+  }
+
+  .poster-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    justify-content: space-between;
+  }
 
   // Shared styles for clean text inputs
   input,
@@ -143,7 +170,7 @@ main {
 
 .button__container {
   position: fixed;
-  top: 90%;
+  top: 81%;
   left: calc(
     50% + 20vw + var(--padding-l)
   ); // Center + half poster width + padding
@@ -162,7 +189,8 @@ main {
     flex-direction: row;
   }
 
-  button {
+  button,
+  .upload-btn {
     padding: var(--padding-s) var(--padding-l);
     background: var(--secondary-color);
     color: var(--primary-color);
@@ -171,6 +199,8 @@ main {
     font-size: 1rem;
     cursor: pointer;
     transition: filter 0.2s ease;
+    text-align: center;
+    display: inline-block;
 
     &:hover {
       filter: invert(100%) brightness(0.8);
