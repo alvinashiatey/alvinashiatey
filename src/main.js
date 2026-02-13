@@ -19,8 +19,8 @@ function initQuotes() {
   setTimeout(() => {
     quotesContainer.classList.add("visible");
     showNextQuote();
-    // Cycle through quotes every 33 seconds
-    setInterval(showNextQuote, 33000);
+    // Cycle through quotes every 66 seconds
+    setInterval(showNextQuote, 66000);
   }, 33000);
 }
 
