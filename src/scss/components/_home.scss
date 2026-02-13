@@ -12,6 +12,21 @@ main {
       p:nth-child(odd) {
         padding-bottom: var(--padding-m);
       }
+
+      .quotes {
+        margin-block: var(--padding-m);
+        opacity: 0;
+        transition: opacity 0.5s ease;
+        &.visible {
+          opacity: 0.5;
+        }
+        .quote {
+          display: none;
+          &.active {
+            display: block;
+          }
+        }
+      }
     }
     .portfolio {
       flex: 1.5;
