@@ -141,7 +141,7 @@ function slideInfoElements({ title, description, total }) {
   Object.keys(elements).forEach((key) => {
     elements[key].element = document.createElement(elements[key].type);
     elements[key].classList.forEach((className) =>
-      elements[key].element.classList.add(className)
+      elements[key].element.classList.add(className),
     );
   });
   elements.title.element.innerText = title;
@@ -226,7 +226,7 @@ function setupIntersectionObserver() {
     entries.forEach((entry) => {
       const targetId = entry.target.id;
       const correspondingNavItem = document.querySelector(
-        `.nav__item[data-target="${targetId}"]`
+        `.nav__item[data-target="${targetId}"]`,
       );
 
       if (entry.isIntersecting) {

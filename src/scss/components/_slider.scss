@@ -30,12 +30,18 @@
       }
     }
   }
+  .info__wrapper {
+    display: block;
+  }
   .slide__info {
     display: flex;
     justify-content: space-between;
     padding-block: var(--padding-s);
     .slide__title {
-      text-transform: uppercase;
+      display: none;
     }
+  }
+  .slide__description {
+    display: none;
   }
 }
