@@ -1,7 +1,6 @@
 const SLUG = "aa-portfolio";
 async function fetchArena(slug) {
-  const randomString = Math.random().toString(16).slice(2);
-  const contentUrl = `https://api.are.na/v2/channels/${slug}?sort=position&order=desc&per=100?nocache=${randomString}`;
+  const contentUrl = `https://api.are.na/v3/channels/${slug}/contents?order=desc&per=100`;
   return fetch(contentUrl).then((data) => data.json());
 }
 
@@ -12,18 +11,18 @@ async function handleData() {
     data = JSON.parse(data);
   } else {
     data = await fetchArena(SLUG);
-    const result = data.contents.reduce((acc, content) => {
+    const result = data.data.reduce((acc, content) => {
       const key = content.title.split("_")[0];
       acc[key] = acc[key] || [];
 
       const isVideo =
-        content.class === "Attachment" &&
+        content.type === "Attachment" &&
         content.attachment?.content_type?.startsWith("video/");
 
       acc[key].push({
         title: content.title,
-        description: content["description_html"],
-        image: content.image?.original?.url || null,
+        description: content?.description?.html,
+        image: content.image?.src || null,
         type: isVideo ? "video" : "image",
         videoUrl: isVideo ? content.attachment.url : null,
       });
