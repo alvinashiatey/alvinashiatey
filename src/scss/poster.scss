@@ -139,7 +139,9 @@ main {
       background: transparent;
       cursor: pointer;
       opacity: 0;
-      transition: opacity 0.2s ease, transform 0.2s ease;
+      transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
 
       &::before,
       &::after {
@@ -200,7 +202,9 @@ main {
     opacity: 0;
     transform: translateY(6px) scale(0.96);
     transform-origin: bottom left;
-    transition: opacity 220ms ease, transform 220ms ease;
+    transition:
+      opacity 220ms ease,
+      transform 220ms ease;
     pointer-events: none;
 
     &.visible {
@@ -240,7 +244,9 @@ main {
     font-family: inherit;
     font-size: 1rem;
     cursor: pointer;
-    transition: filter 0.2s ease, transform 0.2s ease;
+    transition:
+      filter 0.2s ease,
+      transform 0.2s ease;
     text-align: center;
     display: inline-block;
 
