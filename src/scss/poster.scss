@@ -27,6 +27,14 @@ header {
 main {
   flex: 1;
   padding: var(--padding-l);
+  display: flex;
+  justify-content: center;
+}
+
+.poster-editor-layout {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--padding-l);
 }
 
 .poster-container {
@@ -34,6 +42,7 @@ main {
   --poster-heading-color: #ff48b0;
   --poster-body-color: #0078bf;
 
+  flex: 0 0 40vw;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -47,6 +56,13 @@ main {
   padding: var(--padding-l);
   aspect-ratio: 8.5 / 11; // US Letter size
   overflow: hidden;
+  transition: transform 220ms ease;
+
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
 
   #background-canvas {
     position: absolute;
@@ -86,10 +102,15 @@ main {
     margin: 0;
     width: 100%;
     resize: none;
+    transition: opacity 180ms ease;
 
     &::placeholder {
       color: inherit;
       opacity: 0.5;
+    }
+
+    &:focus-visible {
+      opacity: 1;
     }
   }
 
@@ -118,7 +139,7 @@ main {
       background: transparent;
       cursor: pointer;
       opacity: 0;
-      transition: opacity 0.2s ease;
+      transition: opacity 0.2s ease, transform 0.2s ease;
 
       &::before,
       &::after {
@@ -142,6 +163,7 @@ main {
 
     &:hover .close-btn {
       opacity: 0.5;
+      transform: scale(1.05);
 
       &:hover {
         opacity: 1;
@@ -165,27 +187,48 @@ main {
     opacity: 0.8;
     color: var(--poster-body-color);
   }
+
+  .qr-code-wrapper {
+    position: absolute;
+    left: var(--padding-l);
+    bottom: var(--padding-l);
+    width: clamp(70px, 10vw, 110px);
+    height: clamp(70px, 10vw, 110px);
+    background: #fefefe;
+    padding: 0.2rem;
+    z-index: 2;
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+    transform-origin: bottom left;
+    transition: opacity 220ms ease, transform 220ms ease;
+    pointer-events: none;
+
+    &.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+  }
 }
 
 .button__container {
-  position: fixed;
-  top: 81%;
-  left: calc(
-    50% + 20vw + var(--padding-l)
-  ); // Center + half poster width + padding
-  transform: translateY(-50%);
-  z-index: 1000;
   display: flex;
   flex-direction: column;
   gap: var(--padding-s);
+  align-self: flex-end;
 
   @media (max-width: 768px) {
-    position: fixed;
-    top: auto;
-    bottom: var(--padding-l);
-    left: 50%;
-    transform: translateX(-50%);
+    align-self: center;
     flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: min(100%, 40rem);
   }
 
   button,
@@ -197,13 +240,32 @@ main {
     font-family: inherit;
     font-size: 1rem;
     cursor: pointer;
-    transition: filter 0.2s ease;
+    transition: filter 0.2s ease, transform 0.2s ease;
     text-align: center;
     display: inline-block;
 
     &:hover {
       filter: invert(100%) brightness(0.8);
+      transform: translateY(-2px);
     }
+
+    &:active {
+      transform: translateY(0) scale(0.98);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poster-container,
+  .poster-container input,
+  .poster-container textarea,
+  .poster-container .subheading-wrapper .close-btn,
+  .poster-container .qr-code-wrapper,
+  .button__container button,
+  .button__container .upload-btn {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
   }
 }
 
@@ -229,6 +291,11 @@ main {
 
   main {
     padding: 0;
+    display: block;
+  }
+
+  .poster-editor-layout {
+    display: block;
   }
 
   .poster-container {

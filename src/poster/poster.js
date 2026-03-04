@@ -1,5 +1,6 @@
 import "../scss/poster.scss";
 import { DitheredImageHandler } from "./imageHandler.js";
+import QRCode from "qrcode";
 
 const MAX_WORDS = 100;
 
@@ -22,10 +23,13 @@ const subheadingWrapper = document.querySelector(".subheading-wrapper");
 const closeBtn = document.querySelector(".subheading-wrapper .close-btn");
 const saveBtn = document.getElementById("generate-poster-btn");
 const randomizeBtn = document.getElementById("randomize-btn");
+const createQrBtn = document.getElementById("create-qr-btn");
+const clearQrBtn = document.getElementById("clear-qr-btn");
 const posterContainer = document.querySelector(".poster-container");
 const imageUpload = document.getElementById("image-upload");
 const clearImageBtn = document.getElementById("clear-image-btn");
 const backgroundCanvas = document.getElementById("background-canvas");
+const qrCodeWrapper = document.getElementById("qr-code-wrapper");
 
 // Initialize dithered image handler
 let imageHandler = null;
@@ -52,6 +56,12 @@ randomizeBtn.addEventListener("click", () => {
   if (imageHandler) {
     imageHandler.randomize(hexToRgb(headingColor));
   }
+
+  if (hasQrCode && lastQrValue) {
+    renderQrCode(lastQrValue).catch((error) => {
+      console.error("Error updating QR code color:", error);
+    });
+  }
 });
 
 // Helper to parse hex color to RGB object (0-1 range)
@@ -73,6 +83,77 @@ function getCurrentHeadingColor() {
     .trim();
   return hexToRgb(colorValue);
 }
+
+function getCurrentBodyColor() {
+  return getComputedStyle(posterContainer)
+    .getPropertyValue("--poster-body-color")
+    .trim();
+}
+
+let hasQrCode = false;
+let lastQrValue = "";
+
+function updateQrControls() {
+  createQrBtn.textContent = hasQrCode ? "Update QR" : "Create QR";
+  createQrBtn.setAttribute(
+    "aria-label",
+    hasQrCode ? "Update QR code" : "Create QR code",
+  );
+  clearQrBtn.hidden = !hasQrCode;
+}
+
+async function renderQrCode(value) {
+  const qrDataUrl = await QRCode.toDataURL(value, {
+    width: 160,
+    margin: 1,
+    color: {
+      dark: getCurrentBodyColor(),
+      light: "#fefefe",
+    },
+  });
+
+  const qrImage = document.createElement("img");
+  qrImage.src = qrDataUrl;
+  qrImage.alt = "QR code";
+
+  qrCodeWrapper.innerHTML = "";
+  qrCodeWrapper.appendChild(qrImage);
+  qrCodeWrapper.classList.add("visible");
+  lastQrValue = value;
+  hasQrCode = true;
+  updateQrControls();
+}
+
+function clearQrCode() {
+  qrCodeWrapper.innerHTML = "";
+  qrCodeWrapper.classList.remove("visible");
+  lastQrValue = "";
+  hasQrCode = false;
+  updateQrControls();
+}
+
+createQrBtn.addEventListener("click", async () => {
+  const input = window.prompt(
+    hasQrCode
+      ? "Enter new URL or text to update the QR code:"
+      : "Enter URL or text for the QR code:",
+  );
+
+  if (!input || !input.trim()) return;
+
+  try {
+    await renderQrCode(input.trim());
+  } catch (error) {
+    console.error("Error creating QR code:", error);
+    alert("Couldn't create QR code. Please try again.");
+  }
+});
+
+clearQrBtn.addEventListener("click", () => {
+  clearQrCode();
+});
+
+updateQrControls();
 
 // Handle image upload
 imageUpload.addEventListener("change", async (e) => {

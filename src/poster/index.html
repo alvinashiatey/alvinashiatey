@@ -10,80 +10,106 @@
   <body>
     <div id="poster-app">
       <main role="main" aria-label="Poster Generator">
-        <div
-          class="poster-container"
-          role="form"
-          aria-label="Poster content editor"
-        >
-          <canvas id="background-canvas" aria-hidden="true"></canvas>
-          <div class="poster-content">
-            <div class="heading-group">
-              <input
-                type="text"
-                class="heading"
-                value="Opportunities"
-                maxlength="100"
-                aria-label="Poster heading"
-              />
-              <div class="subheading-wrapper">
+        <div class="poster-editor-layout">
+          <div
+            class="poster-container"
+            role="form"
+            aria-label="Poster content editor"
+          >
+            <canvas id="background-canvas" aria-hidden="true"></canvas>
+            <div class="poster-content">
+              <div class="heading-group">
                 <input
                   type="text"
-                  class="subheading"
-                  value="Subheading"
+                  class="heading"
+                  value="Opportunities"
                   maxlength="100"
-                  aria-label="Poster subheading"
+                  aria-label="Poster heading"
                 />
-                <button
-                  type="button"
-                  class="close-btn"
-                  aria-label="Remove subheading"
-                ></button>
+                <div class="subheading-wrapper">
+                  <input
+                    type="text"
+                    class="subheading"
+                    value="Subheading"
+                    maxlength="100"
+                    aria-label="Poster subheading"
+                  />
+                  <button
+                    type="button"
+                    class="close-btn"
+                    aria-label="Remove subheading"
+                  ></button>
+                </div>
+                <hr aria-hidden="true" />
               </div>
-              <hr aria-hidden="true" />
+              <br />
+              <textarea
+                class="body-text"
+                id="poster-text"
+                placeholder="Click here to include text..."
+                aria-label="Poster body text, maximum 100 words"
+                maxlength="500"
+              ></textarea>
+              <input
+                type="text"
+                class="contact"
+                placeholder="E-mail"
+                maxlength="100"
+                aria-label="Contact information"
+              />
             </div>
-            <br />
-            <textarea
-              class="body-text"
-              id="poster-text"
-              placeholder="Click here to include text..."
-              aria-label="Poster body text, maximum 100 words"
-              maxlength="500"
-            ></textarea>
-            <input
-              type="text"
-              class="contact"
-              placeholder="E-mail"
-              maxlength="100"
-              aria-label="Contact information"
-            />
+            <div
+              id="qr-code-wrapper"
+              class="qr-code-wrapper"
+              aria-live="polite"
+            ></div>
+          </div>
+
+          <div class="button__container">
+            <label class="upload-btn" aria-label="Upload background image">
+              <input
+                type="file"
+                id="image-upload"
+                accept="image/*"
+                hidden
+                aria-label="Upload background image"
+              />
+              Upload Image
+            </label>
+            <button
+              type="button"
+              id="clear-image-btn"
+              aria-label="Clear background image"
+              hidden
+            >
+              Clear Image
+            </button>
+            <button
+              type="button"
+              id="randomize-btn"
+              aria-label="Randomize colors"
+            >
+              Color Me
+            </button>
+            <button
+              type="button"
+              id="create-qr-btn"
+              aria-label="Create QR code"
+            >
+              Create QR
+            </button>
+            <button
+              type="button"
+              id="clear-qr-btn"
+              aria-label="Clear QR code"
+              hidden
+            >
+              Clear QR
+            </button>
+            <button type="button" id="generate-poster-btn">Save</button>
           </div>
         </div>
       </main>
-    </div>
-
-    <div class="button__container">
-      <label class="upload-btn" aria-label="Upload background image">
-        <input
-          type="file"
-          id="image-upload"
-          accept="image/*"
-          hidden
-          aria-label="Upload background image"
-        />
-        Upload Image
-      </label>
-      <button
-        type="button"
-        id="clear-image-btn"
-        aria-label="Clear background image"
-        hidden
-      >
-        Clear Image
-      </button>
-      <button type="button" id="randomize-btn" aria-label="Randomize colors">
-        Color Me
-      </button>
-      <button type="button" id="generate-poster-btn">Save</button>
     </div>
 
     <script type="module" src="./poster.js"></script>
