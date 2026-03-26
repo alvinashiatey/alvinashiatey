@@ -6,11 +6,15 @@
 @use "components/typography";
 
 #poster-app {
+  --poster-ui-width: 11rem;
+  --poster-ui-pad: clamp(0.5rem, 1.2vw, 1.25rem);
+
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   background-color: var(--primary-color);
   color: var(--secondary-color);
+  overflow: hidden;
 }
 
 header {
@@ -26,14 +30,18 @@ header {
 
 main {
   flex: 1;
-  padding: var(--padding-l);
+  padding: var(--poster-ui-pad);
   display: flex;
   justify-content: center;
+  overflow: hidden;
 }
 
 .poster-editor-layout {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   gap: var(--padding-l);
 }
 
@@ -42,14 +50,19 @@ main {
   --poster-heading-color: #ff48b0;
   --poster-body-color: #0078bf;
 
-  flex: 0 0 40vw;
+  flex: 0 0 auto;
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  max-width: 40vw;
-  margin: 0 auto;
-  font-size: 1.7rem;
+  width: min(
+    8.5in,
+    calc(100vw - 16rem),
+    calc((100vh - 1.5rem) * 8.5 / 11)
+  );
+  max-width: min(100%, 8.5in);
+  margin: 0;
+  font-size: clamp(1.25rem, 1.05rem + 0.9vw, 1.7rem);
   line-height: 1.2;
   background-color: #fefefe;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -86,6 +99,10 @@ main {
     flex-direction: column;
     flex: 1;
     justify-content: space-between;
+  }
+
+  &.qr-active .poster-content {
+    padding-bottom: clamp(78px, 10vw, 128px);
   }
 
   // Shared styles for clean text inputs
@@ -185,9 +202,19 @@ main {
     flex: 1;
     color: var(--poster-body-color);
   }
+
+  .body-text-static {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
   .contact {
     opacity: 0.8;
     color: var(--poster-body-color);
+
+    &.hidden-when-qr {
+      visibility: hidden;
+    }
   }
 
   .qr-code-wrapper {
@@ -225,6 +252,8 @@ main {
   display: flex;
   flex-direction: column;
   gap: var(--padding-s);
+  position: static;
+  width: var(--poster-ui-width);
   align-self: flex-end;
 
   @media (max-width: 768px) {
@@ -237,6 +266,7 @@ main {
 
   button,
   .upload-btn {
+    width: 11rem;
     padding: var(--padding-s) var(--padding-l);
     background: var(--secondary-color);
     color: var(--primary-color);
@@ -272,6 +302,38 @@ main {
     transition: none !important;
     animation: none !important;
     transform: none !important;
+  }
+}
+
+@media (max-width: 1100px) {
+  .poster-editor-layout {
+    align-items: center;
+    flex-direction: column;
+    gap: var(--padding-s);
+  }
+
+  .poster-container {
+    width: min(
+      8.5in,
+      calc(100vw - 1rem),
+      calc((100vh - 11rem) * 8.5 / 11)
+    );
+  }
+
+  .button__container {
+    position: static;
+    align-self: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: min(100%, 32rem);
+
+    button,
+    .upload-btn {
+      width: auto;
+      min-width: 8.8rem;
+      padding-inline: 1rem;
+    }
   }
 }
 

@@ -30,6 +30,7 @@ const imageUpload = document.getElementById("image-upload");
 const clearImageBtn = document.getElementById("clear-image-btn");
 const backgroundCanvas = document.getElementById("background-canvas");
 const qrCodeWrapper = document.getElementById("qr-code-wrapper");
+const contactInput = document.querySelector(".contact");
 
 // Initialize dithered image handler
 let imageHandler = null;
@@ -102,6 +103,11 @@ function updateQrControls() {
   clearQrBtn.hidden = !hasQrCode;
 }
 
+function updateContactVisibility() {
+  const hasContact = Boolean(contactInput.value.trim());
+  contactInput.classList.toggle("hidden-when-qr", hasQrCode && !hasContact);
+}
+
 async function renderQrCode(value) {
   const qrDataUrl = await QRCode.toDataURL(value, {
     width: 160,
@@ -121,7 +127,9 @@ async function renderQrCode(value) {
   qrCodeWrapper.classList.add("visible");
   lastQrValue = value;
   hasQrCode = true;
+  posterContainer.classList.add("qr-active");
   updateQrControls();
+  updateContactVisibility();
 }
 
 function clearQrCode() {
@@ -129,7 +137,9 @@ function clearQrCode() {
   qrCodeWrapper.classList.remove("visible");
   lastQrValue = "";
   hasQrCode = false;
+  posterContainer.classList.remove("qr-active");
   updateQrControls();
+  updateContactVisibility();
 }
 
 createQrBtn.addEventListener("click", async () => {
@@ -154,6 +164,11 @@ clearQrBtn.addEventListener("click", () => {
 });
 
 updateQrControls();
+updateContactVisibility();
+
+contactInput.addEventListener("input", () => {
+  updateContactVisibility();
+});
 
 // Handle image upload
 imageUpload.addEventListener("change", async (e) => {
@@ -220,21 +235,34 @@ closeBtn.addEventListener("click", () => {
 
 // Save poster as image using html2canvas
 saveBtn.addEventListener("click", async () => {
+  let closeButtons = [];
+  let bodyTextStatic = null;
+  let restoreContactDisplay = contactInput.style.display;
+
   try {
     const { default: html2canvas } = await import("html2canvas");
 
     // Temporarily hide close button for clean export
-    const closeButtons = posterContainer.querySelectorAll(".close-btn");
+    closeButtons = posterContainer.querySelectorAll(".close-btn");
     closeButtons.forEach((btn) => (btn.style.display = "none"));
+
+    // Render body text as static content for reliable multiline export
+    bodyTextStatic = document.createElement("div");
+    bodyTextStatic.className = "body-text body-text-static";
+    bodyTextStatic.textContent = bodyText.value;
+    bodyText.style.display = "none";
+    bodyText.insertAdjacentElement("afterend", bodyTextStatic);
+
+    // Hide empty contact placeholder in exported image
+    if (!contactInput.value.trim()) {
+      contactInput.style.display = "none";
+    }
 
     const canvas = await html2canvas(posterContainer, {
       scale: 3, // High resolution for printing
       useCORS: true,
       backgroundColor: "#fefefe",
     });
-
-    // Restore close buttons
-    closeButtons.forEach((btn) => (btn.style.display = ""));
 
     const link = document.createElement("a");
     link.download = "poster.png";
@@ -243,5 +271,12 @@ saveBtn.addEventListener("click", async () => {
   } catch (error) {
     console.error("Error generating poster:", error);
     alert("To enable save, install html2canvas: pnpm add html2canvas");
+  } finally {
+    closeButtons.forEach((btn) => (btn.style.display = ""));
+    if (bodyTextStatic) {
+      bodyTextStatic.remove();
+      bodyText.style.display = "";
+    }
+    contactInput.style.display = restoreContactDisplay;
   }
 });
