@@ -141,7 +141,9 @@ function slideInfoElements({ title, description, total }) {
 function handleSlider({ projects, stage }) {
   if (!projects.length) return;
 
-  let selectionHistory = [pickRandomSelection(projects)];
+  const entries = buildEntries(projects);
+  let currentIndex = 0;
+  let selectionHistory = [entries[currentIndex]];
 
   function syncStage() {
     const paddedHistory = [null, null, ...selectionHistory].slice(-3);
@@ -157,13 +159,23 @@ function handleSlider({ projects, stage }) {
   }
 
   function nextSlide() {
-    const currentSelection = selectionHistory[selectionHistory.length - 1];
-    selectionHistory = [...selectionHistory, pickRandomSelection(projects, currentSelection)].slice(-3);
+    currentIndex = (currentIndex + 1) % entries.length;
+    selectionHistory = [...selectionHistory, entries[currentIndex]].slice(-3);
     syncStage();
   }
 
   syncStage();
   stage.slides.addEventListener("click", nextSlide);
+}
+
+function buildEntries(projects) {
+  return projects.flatMap((project) =>
+      project.items.map((item, itemIndex) => ({
+        project,
+        item,
+        itemIndex,
+      })),
+    );
 }
 
 function renderSlide(container, item) {
@@ -180,53 +192,12 @@ function renderSlide(container, item) {
   container.appendChild(imgEl);
 }
 
-function pickRandomSelection(projects, previousSelection = null) {
-  const availableProjects =
-    projects.length > 1 && previousSelection
-      ? projects.filter((project) => project.key !== previousSelection.project.key)
-      : projects;
-
-  const project = availableProjects[randomIndex(availableProjects.length)];
-  const previousItemTitle =
-    previousSelection && previousSelection.project.key === project.key
-      ? previousSelection.item.title
-      : null;
-
-  const item =
-    project.items.length > 1 && previousItemTitle
-      ? project.items[
-          randomIndex(
-            project.items.length,
-            project.items.findIndex((projectItem) => projectItem.title === previousItemTitle),
-          )
-        ]
-      : project.items[randomIndex(project.items.length)];
-
-  return {
-    project,
-    item,
-    itemIndex: project.items.findIndex((projectItem) => projectItem.title === item.title),
-  };
-}
-
 function cacheIsExpired(cacheDate) {
   const now = new Date();
   const cache = new Date(cacheDate);
   const diff = now - cache;
   const minutes = Math.floor(diff / 1000 / 60);
   return minutes > 60 * 24;
-}
-
-function randomIndex(length, exclude = -1) {
-  if (length <= 1) return 0;
-
-  let index = Math.floor(Math.random() * length);
-
-  while (index === exclude) {
-    index = Math.floor(Math.random() * length);
-  }
-
-  return index;
 }
 
 function randomWidth() {
