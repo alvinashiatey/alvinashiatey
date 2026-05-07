@@ -1,14 +1,20 @@
 main {
   width: 100%;
   height: 100%;
+
   .content__wrapper {
+    position: relative;
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     width: inherit;
-    height: max-content;
-    gap: var(--padding-l);
+    min-height: calc(100vh - var(--m));
+    gap: 0;
+
     .content {
-      flex: 1;
+      position: relative;
+      z-index: 1;
+      width: min(100%, 36rem);
+
       p:nth-child(odd) {
         padding-bottom: var(--padding-m);
       }
@@ -28,28 +34,28 @@ main {
         }
       }
     }
+
     .portfolio {
-      flex: 1.5;
+      position: absolute;
+      inset: 0;
+      z-index: 0;
       width: 100%;
-      height: calc(100vh - var(--m));
+      height: 100%;
       overflow: hidden;
-      @media screen and (max-width: 60em) {
-        height: auto;
-        overflow-y: auto;
-      }
+
       .portfolio__wrapper {
         width: 100%;
         height: 100%;
-        overflow-y: scroll;
-        padding-right: var(
-          --scroll-bar-offset
-        ); /* Increase/decrease this value for cross-browser compatibility */
-        box-sizing: content-box; /* So the width will be 100% + 17px */
+        overflow: hidden;
+        padding-right: 0;
+        box-sizing: border-box;
         display: flex;
         flex-direction: column;
-        gap: calc(var(--padding-l) * 1.5);
+        gap: 0;
+        padding-bottom: 0;
+
         & > :last-child {
-          padding-bottom: calc(var(--padding-l) * 3);
+          padding-bottom: 0;
         }
 
         .project {
@@ -61,9 +67,19 @@ main {
         }
       }
     }
+
     @media screen and (max-width: 60em) {
-      flex-direction: column;
-      height: auto;
+      min-height: calc(100vh - var(--m));
+
+      .content {
+        width: 100%;
+      }
+
+      .portfolio {
+        .portfolio__wrapper {
+          padding-bottom: 0;
+        }
+      }
     }
   }
 }

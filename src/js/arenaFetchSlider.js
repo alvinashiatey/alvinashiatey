@@ -7,6 +7,7 @@ async function fetchArena(slug) {
 async function handleData() {
   const cache = localStorage.getItem("cache");
   let data = localStorage.getItem("data");
+
   if (cache && data && !cacheIsExpired(cache)) {
     data = JSON.parse(data);
   } else {
@@ -32,86 +33,70 @@ async function handleData() {
     localStorage.setItem("data", JSON.stringify(result));
     data = result;
   }
+
   renderSlider({ data, container: "#sliders" });
 }
 
 function renderSlider({ data, container }) {
   const slider = document.querySelector(container);
-  let idx = 0;
+
   if (!slider) return;
-  for (let key in data) {
-    idx++;
-    const div = document.createElement("div");
-    div.classList.add("slider__container");
-    const ul = document.createElement("ul");
-    ul.classList.add("slides");
-    const images = listSlides(data[key]);
-    const info = slideInfoElements({
-      title: key.replace(/-/g, " "),
-      description: data[key][0].description,
-      total: data[key].length,
-    });
-    handleSlider({ slides: images, countContainer: info.count.element });
-    sliderNav({
-      key,
-      container: ".nav__items",
-      text: idx.toString(),
-      slideContainer: slider,
-    });
-    ul.append(...images);
-    div.append(ul);
-    div.append(info.infoWrapper.element);
-    div.id = key;
-    slider.prepend(div);
+
+  const projects = buildProjects(data);
+
+  if (!projects.length) {
+    slider.replaceChildren();
+    return;
   }
+
+  const stage = createStage();
+  slider.replaceChildren(stage.container);
+  handleSlider({ projects, stage });
 }
 
-function listSlides(data) {
-  return data.map((item, idx) => {
-    const li = document.createElement("li");
-    li.classList.add("slide");
-    li.setAttribute("data-title", `${item.title.toLowerCase()}`);
-    li.setAttribute("data-type", item.type);
-    if (idx === 0) li.classList.add("active");
-
-    if (item.type === "video") {
-      const videoEl = document.createElement("video");
-      videoEl.src = item.videoUrl;
-      videoEl.muted = true;
-      videoEl.loop = true;
-      videoEl.playsInline = true;
-      videoEl.preload = "metadata";
-      if (item.image) {
-        videoEl.poster = item.image;
-      }
-      li.appendChild(videoEl);
-    } else {
-      const imgEl = document.createElement("img");
-      imgEl.src = `${item.image}`;
-      imgEl.alt = `${item.title}`;
-      li.appendChild(imgEl);
-    }
-
-    return li;
-  });
+function buildProjects(data) {
+  return Object.entries(data)
+    .map(([key, items]) => ({
+      key,
+      title: key.replace(/-/g, " "),
+      description: items[0]?.description || "",
+      items: items.filter((item) => item.type === "image" && item.image),
+    }))
+    .filter((project) => project.items.length > 0);
 }
 
-function sliderNav({ key, container, text, slideContainer }) {
-  const nav = document.querySelector(container);
-  if (!nav) return;
-  const li = document.createElement("li");
-  li.classList.add("nav__item");
-  li.setAttribute("data-target", key);
-  li.innerText = text;
-  li.addEventListener("click", () => {
-    slideContainer.scrollTo({
-      top: document.getElementById(key).offsetTop,
-      left: 0,
-      behavior: "smooth",
-    });
+function createStage() {
+  const container = document.createElement("div");
+  container.classList.add("slider__container", "slider__container--single");
+
+  const slides = document.createElement("ul");
+  slides.classList.add("slides");
+
+  const slideLayers = ["is-oldest", "is-previous", "is-current"].map(
+    (className) => {
+      const slide = document.createElement("li");
+      slide.classList.add("slide", className);
+      slides.appendChild(slide);
+      return slide;
+    },
+  );
+
+  const info = slideInfoElements({
+    title: "",
+    description: "",
+    total: "",
   });
 
-  nav.appendChild(li);
+  container.append(slides, info.infoWrapper.element);
+
+  return {
+    container,
+    slides,
+    slideLayers,
+    title: info.title.element,
+    count: info.count.element,
+    description: info.description.element,
+  };
 }
 
 function slideInfoElements({ title, description, total }) {
@@ -153,52 +138,75 @@ function slideInfoElements({ title, description, total }) {
   return elements;
 }
 
-function handleSlider({ slides, countContainer }) {
-  if (!slides || !countContainer || slides.length <= 1) return;
-  const slideCount = slides.length;
-  let current = 1;
-  let total = slideCount;
-  let count = 0;
-  countContainer.innerText = `${current} / ${total}`;
+function handleSlider({ projects, stage }) {
+  if (!projects.length) return;
 
-  function handleVideoPlayback(slide, shouldPlay) {
-    const video = slide.querySelector("video");
-    if (video) {
-      if (shouldPlay) {
-        video.play().catch(() => {});
-      } else {
-        video.pause();
-        video.currentTime = 0;
-      }
-    }
-  }
+  let selectionHistory = [pickRandomSelection(projects)];
 
-  function updateActiveSlide(offset) {
-    // Pause video on current slide
-    handleVideoPlayback(slides[count], false);
+  function syncStage() {
+    const paddedHistory = [null, null, ...selectionHistory].slice(-3);
 
-    slides[count].classList.remove("active");
-    count = (count + offset + slideCount) % slideCount;
-    slides[count].classList.add("active");
+    stage.slideLayers.forEach((slide, index) => {
+      renderSlide(slide, paddedHistory[index]?.item);
+    });
 
-    // Play video on new active slide
-    handleVideoPlayback(slides[count], true);
-
-    current = (count + 1).toString();
-    total = slideCount;
-    countContainer.innerText = `${current} / ${total}`;
+    const currentSelection = selectionHistory[selectionHistory.length - 1];
+    stage.title.innerText = currentSelection.project.title;
+    stage.count.innerText = `${currentSelection.itemIndex + 1} / ${currentSelection.project.items.length}`;
+    stage.description.innerHTML = currentSelection.project.description || "";
   }
 
   function nextSlide() {
-    updateActiveSlide(1);
+    const currentSelection = selectionHistory[selectionHistory.length - 1];
+    selectionHistory = [...selectionHistory, pickRandomSelection(projects, currentSelection)].slice(-3);
+    syncStage();
   }
 
-  // Play video on first active slide if it's a video
-  handleVideoPlayback(slides[0], true);
+  syncStage();
+  stage.slides.addEventListener("click", nextSlide);
+}
 
-  slides.forEach((slide) => {
-    slide.addEventListener("click", nextSlide);
-  });
+function renderSlide(container, item) {
+  container.replaceChildren();
+
+  if (!item) return;
+
+  container.style.setProperty("--slide-image-width", `${randomWidth()}%`);
+
+  const imgEl = document.createElement("img");
+  imgEl.src = item.image;
+  imgEl.alt = item.title;
+  imgEl.loading = "eager";
+  container.appendChild(imgEl);
+}
+
+function pickRandomSelection(projects, previousSelection = null) {
+  const availableProjects =
+    projects.length > 1 && previousSelection
+      ? projects.filter((project) => project.key !== previousSelection.project.key)
+      : projects;
+
+  const project = availableProjects[randomIndex(availableProjects.length)];
+  const previousItemTitle =
+    previousSelection && previousSelection.project.key === project.key
+      ? previousSelection.item.title
+      : null;
+
+  const item =
+    project.items.length > 1 && previousItemTitle
+      ? project.items[
+          randomIndex(
+            project.items.length,
+            project.items.findIndex((projectItem) => projectItem.title === previousItemTitle),
+          )
+        ]
+      : project.items[randomIndex(project.items.length)];
+
+  return {
+    project,
+    item,
+    itemIndex: project.items.findIndex((projectItem) => projectItem.title === item.title),
+  };
 }
 
 function cacheIsExpired(cacheDate) {
@@ -209,41 +217,22 @@ function cacheIsExpired(cacheDate) {
   return minutes > 60 * 24;
 }
 
-function setupIntersectionObserver() {
-  const sliderContainers = document.querySelectorAll(".slider__container");
-  const navItems = document.querySelectorAll(".nav__item");
+function randomIndex(length, exclude = -1) {
+  if (length <= 1) return 0;
 
-  if (!sliderContainers.length || !navItems.length) return;
+  let index = Math.floor(Math.random() * length);
 
-  const observerOptions = {
-    root: null,
-    rootMargin: "-20% 0px -60% 0px",
-    threshold: 0,
-  };
+  while (index === exclude) {
+    index = Math.floor(Math.random() * length);
+  }
 
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      const targetId = entry.target.id;
-      const correspondingNavItem = document.querySelector(
-        `.nav__item[data-target="${targetId}"]`,
-      );
+  return index;
+}
 
-      if (entry.isIntersecting) {
-        navItems.forEach((item) => item.classList.remove("active"));
-        if (correspondingNavItem) {
-          correspondingNavItem.classList.add("active");
-        }
-      }
-    });
-  }, observerOptions);
-
-  sliderContainers.forEach((container) => {
-    observer.observe(container);
-  });
+function randomWidth() {
+  return 30 + Math.floor(Math.random() * 51);
 }
 
 window.onload = () => {
-  handleData().then(() => {
-    setupIntersectionObserver();
-  });
+  handleData();
 };

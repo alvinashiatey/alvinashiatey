@@ -1,15 +1,5 @@
 footer {
-  position: fixed;
-  bottom: 0;
-  padding-bottom: var(--padding-m);
-  padding-inline: var(--padding-l);
-  padding-right: calc(var(--scroll-bar-offset) + var(--padding-l));
-  display: flex;
-  justify-content: space-between;
-  left: 0;
-  right: 0;
-  margin-left: auto;
-  margin-right: auto;
+  display: none;
 
   .langs {
     //mix-blend-mode: difference;
@@ -61,11 +51,11 @@ footer {
     }
   }
   @media screen and (max-width: 60em) {
-    background: rgb(255, 255, 255);
+    background: rgb(var(--primary-color-rgb));
     background: linear-gradient(
       0deg,
-      rgba(255, 255, 255, 1) 62%,
-      rgba(255, 255, 255, 0) 100%
+      rgba(var(--primary-color-rgb), 1) 62%,
+      rgba(var(--primary-color-rgb), 0) 100%
     );
     padding-inline: var(--padding-m);
   }
