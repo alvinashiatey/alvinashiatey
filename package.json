@@ -16,7 +16,8 @@
     "@vitejs/plugin-legacy": "^1.8.2",
     "html2canvas": "^1.4.1",
     "qrcode": "^1.5.4",
-    "three": "^0.182.0"
+    "three": "^0.182.0",
+    "tweakpane": "^4.0.5"
   },
   "packageManager": "pnpm@10.33.0"
 }
