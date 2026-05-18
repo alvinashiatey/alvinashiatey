@@ -955,6 +955,7 @@ async function handleImageUpload(file) {
     currentThumbnailUrl = URL.createObjectURL(file);
     sourceImagePreview.src = currentThumbnailUrl;
     sourceImagePreview.hidden = false;
+    imageDropZone.classList.add("has-preview");
     imageStatus.textContent = file.name;
     animateImagePalette(extractedGradient);
   } catch (error) {

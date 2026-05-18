@@ -22,6 +22,7 @@ main {
 .gradient-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 22rem;
+  align-items: start;
   gap: clamp(1rem, 2vw, 2rem);
   height: 100%;
   min-height: 0;
@@ -29,7 +30,7 @@ main {
 
 .gradient-stage {
   display: grid;
-  place-items: center;
+  place-items: start center;
   min-height: 0;
   overflow: hidden;
 }
@@ -62,6 +63,7 @@ main {
   gap: 0.75rem;
   min-height: 0;
   overflow: hidden;
+  font-size: 0.92rem;
 
   #pane {
     width: 100%;
@@ -72,6 +74,7 @@ main {
     width: 100% !important;
     max-height: calc(100dvh - clamp(1.5rem, 3vw, 3rem));
     overflow: auto;
+    font-size: 0.82rem;
   }
 
   .tp-rotv {
@@ -85,7 +88,7 @@ main {
 
 .image-dropzone {
   display: grid;
-  grid-template-columns: 4rem minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
   align-items: center;
   min-height: 4rem;
@@ -93,6 +96,10 @@ main {
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.04);
   cursor: pointer;
+
+  &.has-preview {
+    grid-template-columns: 4rem minmax(0, 1fr);
+  }
 
   &.drag-over,
   &:focus-visible {
@@ -109,16 +116,13 @@ main {
   }
 
   img[hidden] {
-    display: block;
-    visibility: hidden;
+    display: none;
   }
 
   p,
   span {
     display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
 
   p {
