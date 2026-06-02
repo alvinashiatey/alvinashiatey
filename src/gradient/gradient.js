@@ -1187,6 +1187,45 @@ auroraFolder.addBinding(fieldParams, "auroraBlur", {
   label: "smooth blur",
 });
 
+const maskFolder = pane.addFolder({ title: "Mask" });
+maskFolder.addBinding(maskParams, "enabled", { label: "enabled" });
+maskFolder.addBinding(maskParams, "amount", {
+  min: 0,
+  max: 1,
+  step: 0.01,
+  label: "amount",
+});
+maskFolder.addBinding(maskParams, "scale", {
+  min: 0.5,
+  max: 5,
+  step: 0.05,
+  label: "scale",
+});
+maskFolder.addBinding(maskParams, "feather", {
+  min: 0.01,
+  max: 0.35,
+  step: 0.005,
+  label: "feather",
+});
+maskFolder.addBinding(maskParams, "contrast", {
+  min: 0.4,
+  max: 3,
+  step: 0.05,
+  label: "contrast",
+});
+maskFolder.addBinding(maskParams, "warp", {
+  min: 0,
+  max: 0.4,
+  step: 0.005,
+  label: "warp",
+});
+maskFolder.addBinding(maskParams, "detail", {
+  min: 0,
+  max: 1,
+  step: 0.01,
+  label: "detail",
+});
+
 const grainFolder = pane.addFolder({ title: "Grain" });
 grainFolder.addBinding(grainParams, "enabled", { label: "enabled" });
 grainFolder.addBinding(grainParams, "amount", {
