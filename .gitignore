@@ -7,3 +7,11 @@ dist-ssr
 pnpm-lock.yaml
 package-lock.json
 node-compile-cache/
+
+# Local planning / research notes
+plan.md
+research.md
+
+# Exported local artifacts
+*.log
+*.tmp
