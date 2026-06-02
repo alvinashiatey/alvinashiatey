@@ -56,6 +56,16 @@ const grainParams = {
   colored: false,
 };
 
+const maskParams = {
+  enabled: false,
+  amount: 0.46,
+  scale: 2.15,
+  feather: 0.12,
+  contrast: 1.3,
+  warp: 0.16,
+  detail: 0.38,
+};
+
 const pointParams = [
   { color: "#f76f8e", x: 0.11, y: 0.22 },
   { color: "#ffb36b", x: 0.82, y: 0.16 },
@@ -99,6 +109,13 @@ const uniforms = {
   uGrainAmount: { value: grainParams.amount },
   uGrainScale: { value: grainParams.scale },
   uGrainColored: { value: grainParams.colored ? 1 : 0 },
+  uMaskEnabled: { value: maskParams.enabled ? 1 : 0 },
+  uMaskAmount: { value: maskParams.amount },
+  uMaskScale: { value: maskParams.scale },
+  uMaskFeather: { value: maskParams.feather },
+  uMaskContrast: { value: maskParams.contrast },
+  uMaskWarp: { value: maskParams.warp },
+  uMaskDetail: { value: maskParams.detail },
   uColors: {
     value: pointParams.map((point) => new THREE.Color(point.color)),
   },
@@ -159,6 +176,13 @@ const material = new THREE.ShaderMaterial({
     uniform float uGrainAmount;
     uniform float uGrainScale;
     uniform float uGrainColored;
+    uniform float uMaskEnabled;
+    uniform float uMaskAmount;
+    uniform float uMaskScale;
+    uniform float uMaskFeather;
+    uniform float uMaskContrast;
+    uniform float uMaskWarp;
+    uniform float uMaskDetail;
     uniform vec3 uColors[POINT_COUNT];
     uniform vec2 uPoints[POINT_COUNT];
 
@@ -510,6 +534,16 @@ function syncGrainUniforms() {
   uniforms.uGrainColored.value = grainParams.colored ? 1 : 0;
 }
 
+function syncMaskUniforms() {
+  uniforms.uMaskEnabled.value = maskParams.enabled ? 1 : 0;
+  uniforms.uMaskAmount.value = maskParams.amount;
+  uniforms.uMaskScale.value = maskParams.scale;
+  uniforms.uMaskFeather.value = maskParams.feather;
+  uniforms.uMaskContrast.value = maskParams.contrast;
+  uniforms.uMaskWarp.value = maskParams.warp;
+  uniforms.uMaskDetail.value = maskParams.detail;
+}
+
 function syncPointUniforms() {
   pointParams.forEach((point, index) => {
     uniforms.uColors.value[index].set(point.color);
@@ -520,6 +554,7 @@ function syncPointUniforms() {
 function syncUniforms() {
   syncFieldUniforms();
   syncGrainUniforms();
+  syncMaskUniforms();
   syncPointUniforms();
 }
 
@@ -630,7 +665,7 @@ function rgbToXyz({ r, g, b }) {
   const normalize = (value) => {
     const channel = value / 255;
     return channel > 0.04045
-      ? Math.pow((channel + 0.055) / 1.055, 2.4)
+      ? ((channel + 0.055) / 1.055) ** 2.4
       : channel / 12.92;
   };
 
@@ -906,7 +941,7 @@ function animateImagePalette({ points: targetPoints, background: targetBackgroun
     if (animationId !== activePaletteAnimation) return;
 
     const progress = clamp((now - start) / duration, 0, 1);
-    const eased = 1 - Math.pow(1 - progress, 3);
+    const eased = 1 - (1 - progress) ** 3;
 
     fieldParams.background = rgbToHex({
       r:
