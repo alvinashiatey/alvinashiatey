@@ -5,7 +5,6 @@ import "../scss/gradient.scss";
 const MAX_POINTS = 5;
 const BASE_EXPORT_WIDTH = 1600;
 const MAX_PIXEL_RATIO = 2;
-const RENDER_MODES = ["Points", "Flow", "Voronoi", "Aurora"];
 
 const ASPECT_RATIOS = {
   Landscape: 16 / 10,
@@ -441,6 +440,28 @@ const material = new THREE.ShaderMaterial({
       return color;
     }
 
+    float organicMask(vec2 uv) {
+      vec2 aspectUv = uv;
+      aspectUv.x *= uResolution.x / max(uResolution.y, 1.0);
+
+      vec2 warpSample = vec2(
+        noise(aspectUv * uMaskScale + vec2(3.1, 7.2)),
+        noise(aspectUv * uMaskScale + vec2(8.4, 1.9))
+      );
+      vec2 maskUv = aspectUv + (warpSample - 0.5) * uMaskWarp;
+
+      float blobs = fbm(maskUv * uMaskScale + vec2(0.0, 1.7));
+      float breakup = fbm(maskUv * uMaskScale * 2.35 + vec2(4.8, 2.6));
+      float ridges = 1.0 - abs(noise(maskUv * uMaskScale * 3.4 + vec2(9.2, 5.1)) * 2.0 - 1.0);
+      float eaten = mix(blobs, blobs * 0.65 + breakup * 0.35, clamp(uMaskDetail, 0.0, 1.0));
+      eaten += (ridges - 0.5) * (0.22 + uMaskDetail * 0.28);
+      eaten = clamp((eaten - 0.5) * max(uMaskContrast, 0.01) + 0.5, 0.0, 1.0);
+
+      float threshold = 1.0 - clamp(uMaskAmount, 0.0, 1.0);
+      float feather = max(uMaskFeather, 0.0001);
+      return smoothstep(threshold - feather, threshold + feather, eaten);
+    }
+
     void main() {
       vec2 uv = warpUv(vUv);
       vec3 base = renderPointField(uv);
@@ -451,6 +472,11 @@ const material = new THREE.ShaderMaterial({
         base = renderVoronoiField(uv);
       } else if (uRenderMode > 0.5) {
         base = renderFlowField(vUv);
+      }
+
+      if (uMaskEnabled > 0.5) {
+        float maskAlpha = organicMask(vUv);
+        base = mix(toLinear(uBackground), base, maskAlpha);
       }
 
       if (uGrainEnabled > 0.5) {
@@ -772,7 +798,7 @@ function improveExtractedPalette(colors) {
 
   if (averagePairwiseDistance(adjusted) >= 10) return adjusted;
 
-  return adjusted.map((color, index) => {
+  return adjusted.map((_, index) => {
     const rgb = rotateHue(vividBase.rgb, (index - 2) * 24);
     return { rgb, lab: rgbToLab(rgb) };
   });

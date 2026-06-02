@@ -40,8 +40,8 @@ Add an optional organic erosion mask to the gradient tool so every render mode c
      - [x] Add `maskParams` defaults in `src/gradient/gradient.js`
      - [x] Add `uMask*` uniforms to the shader material
      - [x] Add `syncMaskUniforms()` and wire it into `syncUniforms()`
-     - [ ] Add `organicMask(vec2 uv)` to the fragment shader
-     - [ ] Apply `mix(background, base, maskAlpha)` before grain/output
+     - [x] Add `organicMask(vec2 uv)` to the fragment shader
+     - [x] Apply `mix(background, base, maskAlpha)` before grain/output
      - [ ] Add a `Mask` Tweakpane folder and bindings
      - [ ] Test all four render modes with mask on/off
      - [ ] Test PNG export with mask enabled
