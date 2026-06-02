@@ -43,8 +43,8 @@ Add an optional organic erosion mask to the gradient tool so every render mode c
      - [x] Add `organicMask(vec2 uv)` to the fragment shader
      - [x] Apply `mix(background, base, maskAlpha)` before grain/output
      - [x] Add a `Mask` Tweakpane folder and bindings
-     - [ ] Test all four render modes with mask on/off
-     - [ ] Test PNG export with mask enabled
+     - [x] Test all four render modes with mask on/off
+     - [x] Test PNG export with mask enabled
    - Acceptance: Worker can execute the feature without guessing missing steps.
 
 ## Files to Modify
