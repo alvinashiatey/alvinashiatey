@@ -9,8 +9,7 @@ package-lock.json
 node-compile-cache/
 
 # Local planning / research notes
-plan.md
-research.md
+.dev-notes/
 
 # Exported local artifacts
 *.log
