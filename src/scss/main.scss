@@ -6,17 +6,24 @@
 @use "./components/home";
 @use "./components/slider";
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   color: var(--secondary-color);
-  width: 100vw;
-  min-height: 100vh;
+  width: 100%;
+  min-height: 100dvh;
   background: var(--primary-color);
-  // overflow: hidden;
+  overflow: hidden;
   font-size: 62.5%;
   padding-inline: var(--padding-l);
+
   #aaa {
     width: 100%;
-    height: 100%;
+    height: 100dvh;
+    min-height: 0;
+
     h1,
     h2,
     h3,
@@ -29,20 +36,30 @@ body {
     li {
       font-size: 1.1rem;
       font-weight: normal;
-      line-height: 120%;
+      line-height: 1.45;
     }
+
     .wrapper {
       position: relative;
       width: 100%;
       height: 100%;
-      @media screen and (max-width: 60em) {
-        width: 100%;
-        padding-inline: var(--padding-m);
-        overflow-y: scroll;
-      }
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--padding-m);
+      padding-block: var(--padding-m) var(--padding-l);
+      overflow: hidden;
     }
   }
+
   @media screen and (max-width: 60em) {
     padding-inline: 0;
+
+    #aaa {
+      .wrapper {
+        padding-inline: var(--padding-m);
+        padding-bottom: var(--padding-m);
+      }
+    }
   }
 }
