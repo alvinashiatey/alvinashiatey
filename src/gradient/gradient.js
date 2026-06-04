@@ -4,8 +4,31 @@ import "../scss/gradient.scss";
 
 const MAX_POINTS = 5;
 const BASE_EXPORT_WIDTH = 1600;
-const PREVIEW_MAX_PIXEL_RATIO = 1.25;
 const EXPORT_PIXEL_RATIO = 1;
+
+const RUNTIME_PROFILES = {
+	editor: {
+		previewPixelRatio: 1.25,
+		previewQuality: 1,
+		targetFps: 60,
+		grainAmountMultiplier: 1,
+		allowMaskByDefault: true,
+	},
+	web: {
+		previewPixelRatio: 1,
+		previewQuality: 0,
+		targetFps: 30,
+		grainAmountMultiplier: 0.8,
+		allowMaskByDefault: false,
+	},
+	mobile: {
+		previewPixelRatio: 0.85,
+		previewQuality: 0,
+		targetFps: 24,
+		grainAmountMultiplier: 0.65,
+		allowMaskByDefault: false,
+	},
+};
 
 const ASPECT_RATIOS = {
 	Landscape: 16 / 10,
@@ -160,6 +183,40 @@ const imageDropZone = document.getElementById("image-dropzone");
 const imageUpload = document.getElementById("image-upload");
 const sourceImagePreview = document.getElementById("source-image-preview");
 const imageStatus = document.getElementById("image-status");
+
+function detectRuntimeProfile() {
+	const explicitProfile = document.body?.dataset.gradientProfile;
+	if (explicitProfile && RUNTIME_PROFILES[explicitProfile]) {
+		return explicitProfile;
+	}
+
+	const isEditor = Boolean(paneHost);
+	if (isEditor) return "editor";
+
+	const mobileQuery =
+		window.matchMedia?.("(max-width: 768px), (pointer: coarse)")?.matches ??
+		false;
+	return mobileQuery ? "mobile" : "web";
+}
+
+const runtimeProfileName = detectRuntimeProfile();
+const runtimeProfile =
+	RUNTIME_PROFILES[runtimeProfileName] || RUNTIME_PROFILES.web;
+
+document.body?.setAttribute("data-gradient-profile", runtimeProfileName);
+
+function applyRuntimeProfileDefaults() {
+	if (runtimeProfileName === "editor") return;
+	fieldParams.animateNoise = false;
+	grainParams.amount = Number(
+		(grainParams.amount * runtimeProfile.grainAmountMultiplier).toFixed(3),
+	);
+	if (!runtimeProfile.allowMaskByDefault) {
+		maskParams.enabled = false;
+	}
+}
+
+applyRuntimeProfileDefaults();
 
 const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -879,12 +936,15 @@ let currentThumbnailUrl = "";
 let paletteAnimationActive = false;
 let previewFrameId = 0;
 let previewRenderQueued = false;
+const previewVisible = true;
+const pageVisible = document.visibilityState !== "hidden";
+let lastPreviewFrameTime = 0;
 
 function createRenderer(targetCanvas, { quality = "preview" } = {}) {
 	const isExportQuality = quality === "export";
 	const nextRenderer = new THREE.WebGLRenderer({
 		canvas: targetCanvas,
-		antialias: isExportQuality,
+		antialias: isExportQuality || runtimeProfileName === "editor",
 		alpha: false,
 		preserveDrawingBuffer: isExportQuality,
 	});
@@ -893,7 +953,7 @@ function createRenderer(targetCanvas, { quality = "preview" } = {}) {
 	nextRenderer.setPixelRatio(
 		Math.min(
 			window.devicePixelRatio,
-			isExportQuality ? EXPORT_PIXEL_RATIO : PREVIEW_MAX_PIXEL_RATIO,
+			isExportQuality ? EXPORT_PIXEL_RATIO : runtimeProfile.previewPixelRatio,
 		),
 	);
 	return nextRenderer;
@@ -995,15 +1055,22 @@ function syncUniforms() {
 
 function syncPreviewUniforms() {
 	syncUniforms();
-	uniforms.uPreviewQuality.value = 0;
+	uniforms.uPreviewQuality.value = runtimeProfile.previewQuality;
 }
 
 function syncTimeUniform(now = performance.now()) {
 	uniforms.uTime.value = now / 1000;
 }
 
+function isPreviewRenderable() {
+	return previewVisible && pageVisible;
+}
+
 function shouldAnimatePreview() {
-	return fieldParams.animateNoise || paletteAnimationActive;
+	return (
+		isPreviewRenderable() &&
+		(fieldParams.animateNoise || paletteAnimationActive)
+	);
 }
 
 function stopPreviewLoop() {
@@ -1018,7 +1085,25 @@ function renderScene(targetRenderer) {
 
 function renderPreviewFrame(now = performance.now()) {
 	previewFrameId = 0;
+
+	if (!isPreviewRenderable()) {
+		previewRenderQueued = false;
+		lastPreviewFrameTime = 0;
+		return;
+	}
+
+	const frameDuration = 1000 / Math.max(runtimeProfile.targetFps, 1);
+	if (
+		shouldAnimatePreview() &&
+		lastPreviewFrameTime &&
+		now - lastPreviewFrameTime < frameDuration
+	) {
+		previewFrameId = window.requestAnimationFrame(renderPreviewFrame);
+		return;
+	}
+
 	previewRenderQueued = false;
+	lastPreviewFrameTime = now;
 	syncTimeUniform(now);
 	renderScene(renderer);
 
@@ -1037,6 +1122,7 @@ function ensurePreviewLoop() {
 }
 
 function requestRender() {
+	if (!isPreviewRenderable()) return;
 	if (shouldAnimatePreview()) {
 		ensurePreviewLoop();
 		return;
@@ -1076,6 +1162,9 @@ function resizeRenderer() {
 	const { clientWidth, clientHeight } = previewShell;
 	if (!clientWidth || !clientHeight) return;
 
+	renderer.setPixelRatio(
+		Math.min(window.devicePixelRatio, runtimeProfile.previewPixelRatio),
+	);
 	renderer.setSize(clientWidth, clientHeight, false);
 	uniforms.uResolution.value.set(clientWidth, clientHeight);
 	requestRender();
@@ -2066,6 +2155,33 @@ const resizeObserver = new ResizeObserver(() => {
 	resizeRenderer();
 });
 
+const previewVisibilityObserver = new IntersectionObserver(
+	([entry]) => {
+		previewVisible = entry?.isIntersecting ?? true;
+		if (!previewVisible) {
+			stopPreviewLoop();
+			previewRenderQueued = false;
+			return;
+		}
+		requestRender();
+	},
+	{
+		threshold: 0.05,
+	},
+);
+
+const handleDocumentVisibilityChange = () => {
+	pageVisible = document.visibilityState !== "hidden";
+	if (!pageVisible) {
+		stopPreviewLoop();
+		previewRenderQueued = false;
+		return;
+	}
+	requestRender();
+};
+
+document.addEventListener("visibilitychange", handleDocumentVisibilityChange);
+previewVisibilityObserver.observe(previewShell);
 resizeObserver.observe(previewShell);
 resizeRenderer();
 requestRender();
