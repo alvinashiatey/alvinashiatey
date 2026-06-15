@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="/favicon.svg" type="image/x-icon" />
+    <title>Tafoni Dither Tool | Alvin Ashiatey</title>
+  </head>
+
+  <body>
+    <div id="tafoni-app">
+      <main role="main" aria-label="Tafoni dithering tool">
+        <section class="tafoni-layout">
+          <div class="tafoni-stage">
+            <div class="tafoni-preview-shell" id="tafoni-preview-shell">
+              <canvas
+                id="tafoni-canvas"
+                aria-label="Generated tafoni preview with ordered GPU dithering"
+              ></canvas>
+            </div>
+          </div>
+
+          <aside class="tafoni-panel">
+            <div
+              class="image-dropzone"
+              id="image-dropzone"
+              role="button"
+              tabindex="0"
+              aria-label="Upload image to use as the tafoni background"
+            >
+              <img id="source-image-preview" alt="" hidden />
+              <div>
+                <p>Background Image</p>
+                <span id="image-status"
+                  >Drop image or use the pane button to set the tafoni
+                  background</span
+                >
+              </div>
+              <input id="image-upload" type="file" accept="image/*" hidden />
+            </div>
+            <div id="pane"></div>
+          </aside>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./tafoni.js"></script>
+  </body>
+</html>

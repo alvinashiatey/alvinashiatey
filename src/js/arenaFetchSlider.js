@@ -1,12 +1,15 @@
 const SLUG = "aa-portfolio";
+const CACHE_KEY = "arena-slider-cache-v3";
+const DATA_KEY = "arena-slider-data-v3";
+
 async function fetchArena(slug) {
 	const contentUrl = `https://api.are.na/v3/channels/${slug}/contents?order=desc&per=100`;
 	return fetch(contentUrl).then((data) => data.json());
 }
 
 async function handleData() {
-	const cache = localStorage.getItem("cache");
-	let data = localStorage.getItem("data");
+	const cache = localStorage.getItem(CACHE_KEY);
+	let data = localStorage.getItem(DATA_KEY);
 
 	if (cache && data && !cacheIsExpired(cache)) {
 		data = JSON.parse(data);
@@ -23,14 +26,16 @@ async function handleData() {
 			acc[key].push({
 				title: content.title,
 				description: getPlainText(content?.description?.html),
-				image: content.image?.src || null,
+				image: getArenaImageUrl(content.image),
 				type: isVideo ? "video" : "image",
 				videoUrl: isVideo ? content.attachment.url : null,
 			});
 			return acc;
 		}, {});
-		localStorage.setItem("cache", new Date().toLocaleString());
-		localStorage.setItem("data", JSON.stringify(result));
+		localStorage.setItem(CACHE_KEY, new Date().toLocaleString());
+		localStorage.setItem(DATA_KEY, JSON.stringify(result));
+		localStorage.removeItem("cache");
+		localStorage.removeItem("data");
 		data = result;
 	}
 
@@ -50,8 +55,9 @@ function renderSlider({ data, container }) {
 	}
 
 	const stage = createStage();
+	const clickTarget = slider.closest(".container") || slider;
 	slider.replaceChildren(stage.container);
-	handleSlider({ projects, stage });
+	handleSlider({ projects, stage, clickTarget });
 }
 
 function buildProjects(data) {
@@ -138,13 +144,13 @@ function slideInfoElements({ title, description, total }) {
 	return elements;
 }
 
-function handleSlider({ projects, stage }) {
+function handleSlider({ projects, stage, clickTarget }) {
 	if (!projects.length) return;
 
 	const entries = buildEntries(projects);
-	const navItems = createProjectNav(projects);
 	let currentIndex = 0;
 	let selectionHistory = [entries[currentIndex]];
+	const preloadedImages = new Set();
 
 	function syncStage() {
 		const paddedHistory = [null, null, ...selectionHistory].slice(-3);
@@ -157,61 +163,27 @@ function handleSlider({ projects, stage }) {
 		stage.title.innerText = currentSelection.project.title;
 		stage.count.innerText = `${currentSelection.itemIndex + 1} / ${currentSelection.project.items.length}`;
 		stage.description.textContent = currentSelection.project.description || "";
-		syncProjectNav(navItems, currentSelection.project.key);
+		preloadUpcomingEntries(entries, currentIndex, preloadedImages);
 	}
 
-	function setSelection(nextIndex) {
-		currentIndex = nextIndex;
+	function nextSlide() {
+		currentIndex = (currentIndex + 1) % entries.length;
 		selectionHistory = [...selectionHistory, entries[currentIndex]].slice(-3);
 		syncStage();
 	}
 
-	function nextSlide() {
-		setSelection((currentIndex + 1) % entries.length);
+	function handleCycleClick(event) {
+		const clickedInteractive = event.target.closest(
+			"a, button, input, textarea, select, label",
+		);
+		const clickedContent = event.target.closest(".content, .content-panel");
+
+		if (clickedInteractive || clickedContent) return;
+		nextSlide();
 	}
 
-	navItems.forEach((navItem) => {
-		navItem.button.addEventListener("click", () => {
-			const projectEntryIndex = entries.findIndex(
-				(entry) => entry.project.key === navItem.projectKey,
-			);
-
-			if (projectEntryIndex >= 0) {
-				setSelection(projectEntryIndex);
-			}
-		});
-	});
-
 	syncStage();
-	stage.slides.addEventListener("click", nextSlide);
-}
-
-function createProjectNav(projects) {
-	const navList = document.querySelector(".nav__items");
-
-	if (!navList) return [];
-
-	navList.replaceChildren();
-
-	return projects.map((project) => {
-		const item = document.createElement("li");
-		item.classList.add("nav__item");
-
-		const button = document.createElement("button");
-		button.type = "button";
-		button.innerText = project.title;
-		item.appendChild(button);
-		navList.appendChild(item);
-
-		return { projectKey: project.key, item, button };
-	});
-}
-
-function syncProjectNav(navItems, activeProjectKey) {
-	navItems.forEach(({ item, projectKey }) => {
-		item.classList.toggle("active", projectKey === activeProjectKey);
-		item.classList.toggle("select", projectKey === activeProjectKey);
-	});
+	clickTarget.addEventListener("click", handleCycleClick);
 }
 
 function buildEntries(projects) {
@@ -235,7 +207,52 @@ function renderSlide(container, item) {
 	imgEl.src = item.image;
 	imgEl.alt = item.title;
 	imgEl.loading = "eager";
+	imgEl.decoding = "async";
 	container.appendChild(imgEl);
+}
+
+function preloadUpcomingEntries(
+	entries,
+	currentIndex,
+	preloadedImages,
+	count = 2,
+) {
+	for (let offset = 1; offset <= count; offset += 1) {
+		const nextIndex = (currentIndex + offset) % entries.length;
+		const src = entries[nextIndex]?.item?.image;
+
+		if (!src || preloadedImages.has(src)) continue;
+
+		const img = new Image();
+		img.src = src;
+		preloadedImages.add(src);
+	}
+}
+
+function getArenaImageUrl(image) {
+	if (!image) return null;
+
+	const variants = [
+		image.display,
+		image.large,
+		image.thumb,
+		image.original,
+		image,
+	];
+
+	for (const variant of variants) {
+		const src = variant?.src || variant?.url;
+		if (src) return src;
+	}
+
+	return null;
+}
+
+function getPlainText(html) {
+	if (!html) return "";
+
+	const doc = new DOMParser().parseFromString(html, "text/html");
+	return doc.body.textContent?.trim() || "";
 }
 
 function cacheIsExpired(cacheDate) {
@@ -248,14 +265,6 @@ function cacheIsExpired(cacheDate) {
 
 function randomWidth() {
 	return 30 + Math.floor(Math.random() * 51);
-}
-
-function getPlainText(html) {
-	if (!html) return "";
-
-	const parser = new DOMParser();
-	const doc = parser.parseFromString(html, "text/html");
-	return doc.body.textContent?.trim() || "";
 }
 
 window.onload = () => {

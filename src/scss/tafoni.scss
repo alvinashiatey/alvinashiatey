@@ -1,0 +1,192 @@
+@use "components/reset";
+@use "components/config";
+@use "components/typography";
+
+#tafoni-app {
+  height: 100dvh;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(203, 169, 128, 0.14), transparent 30%),
+    radial-gradient(circle at 20% 20%, rgba(110, 82, 60, 0.18), transparent 28%),
+    linear-gradient(180deg, #060505 0%, #120f0d 100%);
+  color: var(--secondary-color);
+  overflow: hidden;
+}
+
+main {
+  height: 100%;
+  min-height: 100vh;
+  padding: clamp(0.75rem, 1.5vw, 1.5rem);
+  overflow: hidden;
+}
+
+.tafoni-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22rem;
+  align-items: start;
+  gap: clamp(1rem, 2vw, 2rem);
+  height: 100%;
+  min-height: 0;
+}
+
+.tafoni-stage {
+  display: grid;
+  place-items: start center;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tafoni-preview-shell {
+  --tafoni-aspect: 1.6;
+
+  position: relative;
+  aspect-ratio: var(--tafoni-aspect);
+  width: min(100%, calc((100dvh - clamp(1.5rem, 3vw, 3rem)) * var(--tafoni-aspect)));
+  max-height: calc(100dvh - clamp(1.5rem, 3vw, 3rem));
+  min-height: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  background: #0a0807;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+    inset 0 0 80px rgba(71, 47, 31, 0.18);
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.tafoni-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  min-height: 0;
+  overflow: hidden;
+  font-size: 0.92rem;
+
+  #pane {
+    width: 100%;
+    min-height: 0;
+  }
+
+  .tp-dfwv {
+    width: 100% !important;
+    max-height: calc(100dvh - clamp(1.5rem, 3vw, 3rem));
+    overflow: auto;
+    font-size: 0.82rem;
+  }
+
+  .tp-rotv {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(18px);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 24px 80px rgba(0, 0, 0, 0.35);
+  }
+}
+
+.image-dropzone {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  min-height: 4rem;
+  padding: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(132, 97, 72, 0.14);
+  cursor: pointer;
+
+  &.has-preview {
+    grid-template-columns: 4rem minmax(0, 1fr);
+  }
+
+  &.drag-over,
+  &:focus-visible {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.55);
+    background: rgba(201, 167, 129, 0.14);
+  }
+
+  img {
+    width: 4rem;
+    height: 4rem;
+    object-fit: cover;
+    background: #111;
+  }
+
+  img[hidden] {
+    display: none;
+  }
+
+  p,
+  span {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+
+  p {
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  span {
+    margin-top: 0.2rem;
+    font-size: 0.75rem;
+    opacity: 0.65;
+  }
+}
+
+@media (max-width: 1000px) {
+  main {
+    overflow: auto;
+  }
+
+  #tafoni-app {
+    height: auto;
+    overflow: visible;
+  }
+
+  .tafoni-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .tafoni-stage {
+    order: 2;
+    overflow: visible;
+  }
+
+  .tafoni-panel {
+    order: 1;
+    overflow: visible;
+  }
+
+  .tafoni-preview-shell {
+    width: min(100%, calc((100dvh - 22rem) * var(--tafoni-aspect)));
+    max-height: min(70dvh, calc(100dvh - 22rem));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tafoni-preview-shell,
+  .tafoni-panel .tp-rotv {
+    transition: none !important;
+  }
+}
+
+
+.tafoni-preview-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.04), transparent 35%),
+    radial-gradient(circle at 22% 18%, rgba(255, 238, 208, 0.08), transparent 18%),
+    radial-gradient(circle at 78% 70%, rgba(38, 22, 13, 0.24), transparent 22%);
+  mix-blend-mode: screen;
+}
