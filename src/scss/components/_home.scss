@@ -104,6 +104,7 @@ main {
     padding: var(--padding-m);
     border: 0;
     background: transparent;
+    opacity: 0.85;
   }
 
   .portfolio__header {
@@ -127,7 +128,7 @@ main {
     gap: 0;
     padding-bottom: 0;
 
-    & > :last-child {
+    &> :last-child {
       padding-bottom: 0;
     }
   }

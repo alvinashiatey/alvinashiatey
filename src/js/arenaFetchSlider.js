@@ -201,8 +201,6 @@ function renderSlide(container, item) {
 
 	if (!item) return;
 
-	container.style.setProperty("--slide-image-width", `${randomWidth()}%`);
-
 	const imgEl = document.createElement("img");
 	imgEl.src = item.image;
 	imgEl.alt = item.title;
@@ -261,10 +259,6 @@ function cacheIsExpired(cacheDate) {
 	const diff = now - cache;
 	const minutes = Math.floor(diff / 1000 / 60);
 	return minutes > 60 * 24;
-}
-
-function randomWidth() {
-	return 30 + Math.floor(Math.random() * 51);
 }
 
 window.onload = () => {

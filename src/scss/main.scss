@@ -11,6 +11,13 @@ html {
 }
 
 body {
+  --primary-color: #000;
+  --secondary-color: #f4efe7;
+  --muted-color: #b6b0a6;
+  --accent-color: #8fb8a3;
+  --primary-color-rgb: 0, 0, 0;
+  --secondary-color-rgb: 244, 239, 231;
+
   color: var(--secondary-color);
   width: 100%;
   min-height: 100dvh;
