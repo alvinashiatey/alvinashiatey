@@ -99,8 +99,7 @@ main {
     min-height: 0;
     overflow: hidden;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    gap: var(--padding-m);
+    grid-template-rows: minmax(0, 1fr);
     padding: var(--padding-m);
     border: 0;
     background: transparent;
@@ -112,6 +111,37 @@ main {
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
+  }
+
+  .portfolio__autoplay {
+    position: absolute;
+    top: 0;
+    right: var(--padding-m);
+    z-index: 4;
+    appearance: none;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px solid currentColor;
+    border-radius: 0;
+    color: var(--secondary-color);
+    background: transparent;
+    font: inherit;
+    font-size: 1.1rem;
+    line-height: 1.45;
+    cursor: pointer;
+    transition:
+      color 0.2s ease,
+      opacity 0.2s ease;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--accent-color);
+    }
+
+    &:focus-visible {
+      outline: 1px solid currentColor;
+      outline-offset: 0.3rem;
+    }
   }
 
   .portfolio__wrapper {

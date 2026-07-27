@@ -1,6 +1,7 @@
 const SLUG = "aa-portfolio";
 const CACHE_KEY = "arena-slider-cache-v3";
 const DATA_KEY = "arena-slider-data-v3";
+const AUTOPLAY_INTERVAL = 5000;
 
 async function fetchArena(slug) {
 	const contentUrl = `https://api.are.na/v3/channels/${slug}/contents?order=desc&per=100`;
@@ -78,14 +79,9 @@ function createStage() {
 	const slides = document.createElement("ul");
 	slides.classList.add("slides");
 
-	const slideLayers = ["is-oldest", "is-previous", "is-current"].map(
-		(className) => {
-			const slide = document.createElement("li");
-			slide.classList.add("slide", className);
-			slides.appendChild(slide);
-			return slide;
-		},
-	);
+	const slide = document.createElement("li");
+	slide.classList.add("slide", "is-current");
+	slides.appendChild(slide);
 
 	const info = slideInfoElements({
 		title: "",
@@ -98,7 +94,7 @@ function createStage() {
 	return {
 		container,
 		slides,
-		slideLayers,
+		slide,
 		title: info.title.element,
 		count: info.count.element,
 		description: info.description.element,
@@ -149,27 +145,52 @@ function handleSlider({ projects, stage, clickTarget }) {
 
 	const entries = buildEntries(projects);
 	let currentIndex = 0;
-	let selectionHistory = [entries[currentIndex]];
+	let isPlaying = true;
+	let autoplayTimer;
 	const preloadedImages = new Set();
+	const autoplayButton = document.querySelector(".portfolio__autoplay");
 
 	function syncStage() {
-		const paddedHistory = [null, null, ...selectionHistory].slice(-3);
-
-		stage.slideLayers.forEach((slide, index) => {
-			renderSlide(slide, paddedHistory[index]?.item);
-		});
-
-		const currentSelection = selectionHistory[selectionHistory.length - 1];
+		const currentSelection = entries[currentIndex];
+		renderSlide(stage.slide, currentSelection.item);
 		stage.title.innerText = currentSelection.project.title;
 		stage.count.innerText = `${currentSelection.itemIndex + 1} / ${currentSelection.project.items.length}`;
 		stage.description.textContent = currentSelection.project.description || "";
 		preloadUpcomingEntries(entries, currentIndex, preloadedImages);
 	}
 
-	function nextSlide() {
+	function nextSlide({ manual = false } = {}) {
 		currentIndex = (currentIndex + 1) % entries.length;
-		selectionHistory = [...selectionHistory, entries[currentIndex]].slice(-3);
 		syncStage();
+
+		if (manual && isPlaying) startAutoplay();
+	}
+
+	function startAutoplay() {
+		clearInterval(autoplayTimer);
+		autoplayTimer = window.setInterval(nextSlide, AUTOPLAY_INTERVAL);
+	}
+
+	function updateAutoplayButton() {
+		if (!autoplayButton) return;
+
+		autoplayButton.textContent = isPlaying ? "Pause" : "Play";
+		autoplayButton.setAttribute("aria-pressed", String(isPlaying));
+		autoplayButton.setAttribute(
+			"aria-label",
+			isPlaying ? "Pause portfolio slideshow" : "Play portfolio slideshow",
+		);
+	}
+
+	function toggleAutoplay() {
+		isPlaying = !isPlaying;
+		updateAutoplayButton();
+
+		if (isPlaying) {
+			startAutoplay();
+		} else {
+			clearInterval(autoplayTimer);
+		}
 	}
 
 	function handleCycleClick(event) {
@@ -179,11 +200,14 @@ function handleSlider({ projects, stage, clickTarget }) {
 		const clickedContent = event.target.closest(".content, .content-panel");
 
 		if (clickedInteractive || clickedContent) return;
-		nextSlide();
+		nextSlide({ manual: true });
 	}
 
 	syncStage();
+	updateAutoplayButton();
+	startAutoplay();
 	clickTarget.addEventListener("click", handleCycleClick);
+	autoplayButton?.addEventListener("click", toggleAutoplay);
 }
 
 function buildEntries(projects) {
@@ -201,12 +225,16 @@ function renderSlide(container, item) {
 
 	if (!item) return;
 
+	const mediaFrame = document.createElement("div");
+	mediaFrame.classList.add("slide__media");
+
 	const imgEl = document.createElement("img");
 	imgEl.src = item.image;
 	imgEl.alt = item.title;
 	imgEl.loading = "eager";
 	imgEl.decoding = "async";
-	container.appendChild(imgEl);
+	mediaFrame.appendChild(imgEl);
+	container.appendChild(mediaFrame);
 }
 
 function preloadUpcomingEntries(

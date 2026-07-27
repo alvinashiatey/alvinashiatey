@@ -48,34 +48,37 @@
         transform: translate3d(0, 0, 0) scale(1);
       }
 
-      &.is-previous {
-        opacity: 0.85;
-        z-index: 2;
-        transform: translate3d(0.85rem, 0.85rem, 0) scale(0.985);
-        filter: grayscale(1) brightness(0.82) contrast(0.95);
-      }
+      .slide__media {
+        --media-inset: clamp(0.5rem, 2vw, 1.5rem);
 
-      &.is-oldest {
-        opacity: 0.2;
-        z-index: 1;
-        transform: translate3d(0, 0, 0) scale(1.03);
-        filter: grayscale(1) brightness(0.45) contrast(0.9);
+        position: relative;
+        width: min(100%, 72rem);
+        height: clamp(22rem, 72vh, 52rem);
+        justify-self: center;
+        align-self: center;
+        margin: 0 auto;
+        display: grid;
+        place-items: center;
+
+        @media screen and (max-width: 60em) {
+          --media-inset: 0rem;
+
+          width: 100%;
+          height: clamp(18rem, 60vh, 36rem);
+        }
       }
 
       img,
       video {
+        position: absolute;
+        inset: var(--media-inset);
         display: block;
-        width: var(--slide-image-width, 55%);
-        max-width: 80%;
-        max-height: 78vh;
-        height: auto;
-        margin: 0 auto;
+        width: calc(100% - (2 * var(--media-inset)));
+        height: calc(100% - (2 * var(--media-inset)));
+        max-width: none;
+        max-height: none;
         object-fit: contain;
-
-        @media screen and (max-width: 60em) {
-          width: 100%;
-          max-width: 100%;
-        }
+        object-position: center;
       }
     }
   }
@@ -110,25 +113,14 @@
 
 .slider__container--single {
   width: min(100%, 72rem);
-  min-height: calc(100vh - var(--m));
+  height: 100%;
+  min-height: 0;
   margin: 0 auto;
 
   .slide {
     &.is-current {
       opacity: 1;
       transform: translate3d(0, 0, 0) scale(1);
-    }
-
-    &.is-previous {
-      opacity: 0.3;
-      transform: translate3d(0, 0, 0) scale(1.015);
-      filter: grayscale(1) brightness(0.6) contrast(0.9);
-    }
-
-    &.is-oldest {
-      opacity: 0.16;
-      transform: translate3d(0, 0, 0) scale(1.04);
-      filter: grayscale(1) brightness(0.42) contrast(0.9);
     }
   }
 }

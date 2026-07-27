@@ -62,12 +62,41 @@
                 </p>
               </div>
               <div class="portfolio">
+                <button
+                  class="portfolio__autoplay"
+                  type="button"
+                  aria-pressed="true"
+                  aria-label="Pause portfolio slideshow"
+                >
+                  Pause
+                </button>
                 <div id="sliders" class="portfolio__wrapper"></div>
               </div>
             </div>
           </div>
         </main>
         <footer>
+          <div class="tools-menu">
+            <button
+              class="tools-menu__trigger"
+              type="button"
+              aria-expanded="false"
+              aria-controls="tools-menu-list"
+            >
+              <span>Tools</span>
+              <span class="tools-menu__mark" aria-hidden="true">+</span>
+            </button>
+            <nav
+              class="tools-menu__panel"
+              id="tools-menu-list"
+              aria-label="Creative tools"
+              hidden
+            >
+              <a href="/gradient/">Mesh Gradient Generator</a>
+              <a href="/tafoni/">Tafoni Generator</a>
+              <a href="/poster/">Poster Generator</a>
+            </nav>
+          </div>
           <div class="portfolio__nav">
             <div class="nav">
               <ul class="nav__items"></ul>

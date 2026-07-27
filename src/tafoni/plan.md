@@ -2,53 +2,53 @@
 
 ## Goal
 
-Remove the user-facing tafoni noise controls (`scale`, `strength`, `detail`, and `smooth blur`) from the Tafoni section while keeping tafoni generation, masking, preview, and export working.
+Make preview and export render the tafoni at the same apparent scale by removing resolution-dependent differences from the procedural, blur, dither, and quality paths without changing unrelated export features.
 
 ## Tasks
 
-1. **Remove tafoni noise state from the runtime model**
+1. **Audit and isolate scale-driving render inputs**: Identify every place where preview/export divergence comes from `uResolution`, drawing-buffer size, or export-only quality switches.
    - File: `tafoni.js`
-   - Changes: Delete `tafoniParams.tafoniScale`, `tafoniParams.tafoniStrength`, `tafoniParams.tafoniDetail`, and `tafoniParams.tafoniBlur`. Remove the matching randomization lines in `randomizeTafoni()`.
-   - Acceptance: The Tafoni config no longer contains those four controls, and Generate Tafoni no longer mutates them.
+   - Changes: Catalog the current uses of `uResolution`, `uPreviewQuality`, and post-process `uResolution` in the main shader, `renderTafoniCoverage()`, `organicMask()`, `sampleBackground()`, `resizeRenderer()`, and `exportTafoni()`.
+   - Acceptance: There is a clear split between values that should track actual pixel output and values that should stay visually consistent across preview and export.
 
-2. **Choose and document fixed replacement tafoni tuning**
+2. **Add shared logical frame metrics for WYSIWYG scaling**: Introduce a single source of truth for aspect and reference sizing that both preview and export can reuse.
    - File: `tafoni.js`
-   - Changes: Select stable internal values that will replace the removed controls so the tafoni look stays consistent without user-facing configuration.
-   - Acceptance: The replacement values for scale, strength, detail, and blur are explicit in the implementation and are not reintroduced as hidden JS state.
+   - Changes: Add helpers/uniforms such as `uFrameAspect` plus a logical/reference resolution (for example based on `BASE_EXPORT_WIDTH` and the selected aspect) so preview and export can share the same visual coordinate system even when their actual canvas sizes differ.
+   - Acceptance: Preview and export both receive identical aspect/reference metrics for the same selected aspect, while still rendering to different actual pixel sizes when export scale changes.
 
-3. **Remove tafoni noise uniforms and shader inputs**
+3. **Decouple tafoni and mask shape math from actual output resolution**: Stop the procedural artwork from changing size when export scale changes.
    - File: `tafoni.js`
-   - Changes: Delete `uTafoniScale`, `uTafoniStrength`, `uTafoniDetail`, and `uTafoniBlur` from `uniforms`, remove their fragment-shader uniform declarations, and simplify `tafoniCoverageBase()` / `renderTafoniCoverage()` so they no longer depend on those user-facing parameters.
-   - Acceptance: No shader code references `uTafoniScale`, `uTafoniStrength`, `uTafoniDetail`, or `uTafoniBlur`.
+   - Changes: Update `tafoniCoverageBase()`, `renderTafoniCoverage()`, and `organicMask()` to use the new shared aspect/reference metrics instead of raw `uResolution` wherever the intent is visual scale rather than framebuffer size.
+   - Acceptance: Exporting at scale 1, 2, or 4 keeps the tafoni formation, blur footprint, and mask footprint visually consistent relative to the frame.
 
-4. **Replace the removed controls with fixed internal tafoni tuning**
+4. **Keep background-image cover logic separate from procedural scaling**: Preserve current background image framing while removing its accidental coupling to procedural scale.
    - File: `tafoni.js`
-   - Changes: Inline the chosen stable constants inside the shader logic where the removed uniforms were previously used so the tafoni look remains consistent without exposing those controls in the UI.
-   - Acceptance: The shader still produces a tafoni pattern, but its scale/strength/detail/blur behavior is driven by fixed values instead of runtime state.
+   - Changes: Leave actual image sampling based on frame aspect, but swap any remaining procedural-only aspect math in `sampleBackground()` call sites to the new shared aspect value so background cover behavior stays unchanged.
+   - Acceptance: Background images still fill the frame the same way in preview/export, while tafoni scale no longer shifts with export size.
 
-5. **Update uniform sync logic**
+5. **Make ordered dither use a shared reference grid**: Ensure dither cell size matches between preview and export instead of shrinking/growing with render resolution.
    - File: `tafoni.js`
-   - Changes: Remove the corresponding assignments from `syncTafoniUniforms()` and any other sync/apply helper that still pushes the removed tafoni parameters.
-   - Acceptance: Sync logic only updates the remaining tafoni state such as background and `tafoniColor`.
+   - Changes: Add a post-process reference-size uniform (for example `uDitherReferenceResolution`), and compute the Bayer lookup coordinates from normalized UV against that shared reference instead of the actual drawing-buffer size.
+   - Acceptance: With the same settings and seed, the dither pattern density appears consistent between preview and exported PNGs, regardless of export scale.
 
-6. **Remove the Tafoni pane controls**
+6. **Narrow the preview/export quality divergence to non-scale-affecting detail**: Fix the remaining mismatch caused by export forcing a different shader quality path.
    - File: `tafoni.js`
-   - Changes: Delete the `tafoniFolder.addBinding(...)` entries for `tafoniScale`, `tafoniStrength`, `tafoniDetail`, and `tafoniBlur`.
-   - Acceptance: The Tafoni panel only shows the remaining essential controls, and the four noise controls are gone.
+   - Changes: Replace the broad `uPreviewQuality` preview/export split with either shared octave counts for structure-forming noise or more targeted quality flags that only affect non-structural detail (for example extra blur taps), then use the same structure-driving settings in preview and export.
+   - Acceptance: Preview and export produce the same tafoni structure for the same seed; any remaining quality difference is limited to subtle detail/performance tradeoffs rather than scale shifts.
 
-7. **Clean up dead references after removal**
+7. **Synchronize the new metrics through preview resize and export rendering**: Wire the logical-vs-actual size model cleanly into both render paths.
    - File: `tafoni.js`
-   - Changes: Remove any now-unused helper variables, comments, labels, or branches left behind by the deleted tafoni noise controls.
-   - Acceptance: Searches for `tafoniScale`, `tafoniStrength`, `tafoniDetail`, and `tafoniBlur` return no runtime/UI references.
+   - Changes: Update `resizeRenderer()`, `syncPreviewUniforms()`, `renderScene()`, and `exportTafoni()` so preview resize updates actual render size plus shared logical metrics, and export scale only changes actual export dimensions.
+   - Acceptance: The preview continues resizing correctly in the UI, and exporting at larger sizes increases output resolution without changing the artwork’s apparent size.
 
-8. **Verify preview and export still work**
-   - Files: `tafoni.js`, `index.html`
-   - Changes: Run syntax validation and browser-check preview rendering, Generate Tafoni, background image upload, mask behavior, and PNG export after removing the controls.
-   - Acceptance: The tool renders and exports correctly with the simplified Tafoni section, and Generate Tafoni still produces meaningful visible variation after those controls are frozen.
+8. **Validate the fix against the reported mismatch only**: Confirm the change solves the scale discrepancy without expanding scope into new preview modes or unrelated rendering redesign.
+   - File: `tafoni.js`
+   - Changes: Manually compare preview versus exports at multiple `export scale` values and aspects using a fixed generated state, with combinations covering dither on/off, mask on/off, and background image on/off.
+   - Acceptance: For the same settings and seed, preview and exported PNGs match in tafoni scale, blur footprint, and dither density; only output pixel sharpness increases with export scale.
 
 ## Files to Modify
 
-- `tafoni.js` - remove the Tafoni-section noise state, shader uniforms/logic wiring, sync code, randomization, and pane controls.
+- `tafoni.js` - add shared aspect/reference metrics, decouple procedural and dither scale from actual render resolution, and align preview/export quality behavior.
 
 ## New Files
 
@@ -56,16 +56,67 @@ Remove the user-facing tafoni noise controls (`scale`, `strength`, `detail`, and
 
 ## Dependencies
 
-- Task 2 depends on Task 1 because the replacement constants should only be chosen once the removable runtime state is clear.
-- Task 3 depends on Tasks 1–2 because the shader contract should match the reduced runtime state and chosen fixed tuning.
-- Task 4 depends on Task 3 because the final internal constants should be applied while simplifying the shader.
-- Task 5 depends on Tasks 1–4 because sync logic must reflect the final uniform set.
-- Task 6 depends on Task 1 because the pane should only expose surviving params.
-- Task 7 depends on Tasks 1–6.
+- Task 2 depends on Task 1 because the shared logical metrics should be designed from the audited divergence points.
+- Tasks 3 and 4 depend on Task 2 because the shaders need the new aspect/reference uniforms before they can stop using raw render resolution.
+- Task 5 depends on Task 2 because the dither pass needs the shared reference grid.
+- Task 6 depends on Task 1 because the quality-path divergence must be narrowed only after the structural sources of mismatch are identified.
+- Task 7 depends on Tasks 2 through 6 because the preview/export wiring must reflect the final uniform model.
 - Task 8 depends on all prior tasks.
 
 ## Risks
 
-- These four controls currently shape the tafoni appearance directly, so removing them may require minor retuning to avoid a flatter or overly repetitive result.
-- The remaining mask system also uses procedural shaping; this plan removes only the Tafoni-section controls, not mask shaping controls.
-- Browser validation is still required because syntax checks alone will not confirm the visual quality after hard-coding the removed values.
+- The biggest product ambiguity is whether preview should exactly match export by sharing the same structural noise settings, or whether some lighter-weight preview optimization must remain for performance; this needs explicit validation during implementation.
+- Changing `uResolution` usage in the shader is easy to over-apply; aspect/background-image math and pixel-output math should not be broken while decoupling procedural scale.
+- Dither density may need tuning after moving to a shared reference grid so the existing `ditherParams.scale` still feels intuitive.
+- There is no automated image-diff coverage in this directory, so final confidence depends on manual side-by-side export checks with a fixed seed.
+
+```acceptance-report
+{
+  "criteriaSatisfied": [
+    {
+      "id": "criterion-1",
+      "status": "satisfied",
+      "evidence": "The plan stays scoped to the preview/export scale mismatch root causes in `tafoni.js` (resolution coupling, dither grid sizing, and quality-path divergence) and does not introduce unrelated UI or export feature work."
+    }
+  ],
+  "changedFiles": [
+    "plan.md"
+  ],
+  "testsAddedOrUpdated": [],
+  "commandsRun": [
+    {
+      "command": "ls .",
+      "result": "passed",
+      "summary": "Confirmed the local tafoni workspace contents before planning."
+    },
+    {
+      "command": "find .. -pattern scss/tafoni.scss",
+      "result": "passed",
+      "summary": "Located the related stylesheet that shapes the preview shell."
+    },
+    {
+      "command": "read tafoni.js",
+      "result": "passed",
+      "summary": "Inspected preview, shader, dither, resize, and export code paths to identify the mismatch sources."
+    },
+    {
+      "command": "read ../scss/tafoni.scss",
+      "result": "passed",
+      "summary": "Confirmed the preview canvas is CSS-sized and therefore not a true 1:1 export viewport."
+    },
+    {
+      "command": "read research.md",
+      "result": "passed",
+      "summary": "Used prior repo research to confirm the root-cause hypotheses for the scale mismatch."
+    }
+  ],
+  "validationOutput": [],
+  "residualRisks": [
+    "Exact preview/export parity may require a product choice between full structural fidelity and lighter preview performance.",
+    "Manual visual validation is still required because this area has no automated export-image assertions.",
+    "Git staged-file state was not directly verifiable in this tool-limited session and should be checked by the parent session if required."
+  ],
+  "noStagedFiles": true,
+  "notes": "Wrote the requested implementation plan to `src/tafoni/plan.md`; this child session used file-inspection tools only and made no application code changes."
+}
+```

@@ -25,3 +25,33 @@ function initQuotes() {
 }
 
 document.addEventListener("DOMContentLoaded", initQuotes);
+
+function initToolsMenu() {
+  const menu = document.querySelector(".tools-menu");
+  const trigger = menu?.querySelector(".tools-menu__trigger");
+  const panel = menu?.querySelector(".tools-menu__panel");
+
+  if (!menu || !trigger || !panel) return;
+
+  function setMenuOpen(isOpen) {
+    trigger.setAttribute("aria-expanded", String(isOpen));
+    panel.hidden = !isOpen;
+    menu.classList.toggle("is-open", isOpen);
+  }
+
+  trigger.addEventListener("click", () => {
+    setMenuOpen(trigger.getAttribute("aria-expanded") !== "true");
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!menu.contains(event.target)) setMenuOpen(false);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    setMenuOpen(false);
+    trigger.focus();
+  });
+}
+
+document.addEventListener("DOMContentLoaded", initToolsMenu);

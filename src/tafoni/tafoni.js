@@ -54,7 +54,7 @@ const exportParams = {
 };
 
 const ditherParams = {
-	enabled: true,
+	enabled: false,
 	levels: 5,
 	strength: 0.42,
 	scale: 2,
@@ -63,10 +63,11 @@ const ditherParams = {
 const tafoniParams = {
 	background: "#0a0908",
 	tafoniColor: "#c96a2a",
-	tafoniScale: 2.4,
-	tafoniStrength: 0.88,
-	tafoniDetail: 0.68,
-	tafoniBlur: 0.72,
+};
+
+const tafoniGenerationState = {
+	offsetX: 0,
+	offsetY: 0,
 };
 
 const maskParams = {
@@ -176,44 +177,80 @@ function applyRuntimeProfileDefaults() {
 	}
 }
 
-function randomBetween(min, max) {
-	return min + Math.random() * (max - min);
-}
-
 function randomItem(items) {
 	return items[Math.floor(Math.random() * items.length)] || items[0];
 }
 
+function randomBetween(min, max) {
+	return min + Math.random() * (max - min);
+}
+
+function normalizeHexColor(value, fallback = TAFONI_COLOR_BANK[0]) {
+	const normalizedValue =
+		typeof value === "string" ? value.trim().toLowerCase() : "";
+	if (/^#[0-9a-f]{6}$/.test(normalizedValue)) {
+		return normalizedValue;
+	}
+
+	const normalizedFallback =
+		typeof fallback === "string" ? fallback.trim().toLowerCase() : "";
+	return /^#[0-9a-f]{6}$/.test(normalizedFallback)
+		? normalizedFallback
+		: TAFONI_COLOR_BANK[0];
+}
+
+let lastValidTafoniColor = normalizeHexColor(tafoniParams.tafoniColor);
+
+function setTafoniColor(value, fallback = lastValidTafoniColor) {
+	const nextColor = normalizeHexColor(value, fallback);
+	tafoniParams.tafoniColor = nextColor;
+	lastValidTafoniColor = nextColor;
+	return nextColor;
+}
+
 function randomizeTafoniColor() {
-	tafoniParams.tafoniColor = randomItem(TAFONI_COLOR_BANK);
+	return setTafoniColor(randomItem(TAFONI_COLOR_BANK));
+}
+
+function randomizeTafoniSeed() {
+	tafoniGenerationState.offsetX = randomBetween(-1000, 1000);
+	tafoniGenerationState.offsetY = randomBetween(-1000, 1000);
 }
 
 function randomizeTafoni() {
-	tafoniParams.tafoniScale = randomBetween(1.2, 3.8);
-	tafoniParams.tafoniStrength = randomBetween(0.5, 1.0);
-	tafoniParams.tafoniDetail = randomBetween(0.18, 0.9);
-	tafoniParams.tafoniBlur = randomBetween(0.15, 1.35);
+	randomizeTafoniSeed();
 	randomizeTafoniColor();
 }
 
 applyRuntimeProfileDefaults();
+randomizeTafoni();
 
 const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 const geometry = new THREE.PlaneGeometry(2, 2);
+const postScene = new THREE.Scene();
+const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
 const uniforms = {
 	uResolution: { value: new THREE.Vector2(1, 1) },
+	uFrameAspect: { value: getSelectedAspect() },
+	uLogicalResolution: {
+		value: new THREE.Vector2(
+			BASE_EXPORT_WIDTH,
+			Math.round(BASE_EXPORT_WIDTH / getSelectedAspect()),
+		),
+	},
 	uBackground: { value: new THREE.Color(tafoniParams.background) },
 	uTafoniColor: { value: new THREE.Color(tafoniParams.tafoniColor) },
+	uTafoniOffset: {
+		value: new THREE.Vector2(
+			tafoniGenerationState.offsetX,
+			tafoniGenerationState.offsetY,
+		),
+	},
 	uBackgroundImage: { value: null },
 	uHasBackgroundImage: { value: 0 },
 	uBackgroundImageAspect: { value: 1 },
-	uTafoniScale: { value: tafoniParams.tafoniScale },
-	uTafoniStrength: { value: tafoniParams.tafoniStrength },
-	uTafoniDetail: { value: tafoniParams.tafoniDetail },
-	uTafoniBlur: { value: tafoniParams.tafoniBlur },
-	uPreviewQuality: { value: 0 },
 	uMaskEnabled: { value: maskParams.enabled ? 1 : 0 },
 	uMaskAmount: { value: maskParams.amount },
 	uMaskScale: { value: maskParams.scale },
@@ -229,6 +266,7 @@ const uniforms = {
 	uMaskPitScale: { value: 17.5 },
 	uMaskStreakStrength: { value: 0.3 },
 	uMaskFeatherVariance: { value: 0.58 },
+	uTransparentExport: { value: 0 },
 };
 
 const material = new THREE.ShaderMaterial({
@@ -250,16 +288,19 @@ const material = new THREE.ShaderMaterial({
 		varying vec2 vUv;
 
 		uniform vec2 uResolution;
+		uniform float uFrameAspect;
+		uniform vec2 uLogicalResolution;
 		uniform vec3 uBackground;
 		uniform vec3 uTafoniColor;
+		uniform vec2 uTafoniOffset;
 		uniform sampler2D uBackgroundImage;
 		uniform float uHasBackgroundImage;
 		uniform float uBackgroundImageAspect;
-		uniform float uTafoniScale;
-		uniform float uTafoniStrength;
-		uniform float uTafoniDetail;
-		uniform float uTafoniBlur;
-		uniform float uPreviewQuality;
+
+		const float TAFONI_SCALE = 2.4;
+		const float TAFONI_STRENGTH = 0.88;
+		const float TAFONI_DETAIL = 0.68;
+		const float TAFONI_BLUR = 0.72;
 		uniform float uMaskEnabled;
 		uniform float uMaskAmount;
 		uniform float uMaskScale;
@@ -275,6 +316,7 @@ const material = new THREE.ShaderMaterial({
 		uniform float uMaskPitScale;
 		uniform float uMaskStreakStrength;
 		uniform float uMaskFeatherVariance;
+		uniform float uTransparentExport;
 
 		vec3 mod289(vec3 x) {
 			return x - floor(x * (1.0 / 289.0)) * 289.0;
@@ -375,12 +417,8 @@ const material = new THREE.ShaderMaterial({
 		float fbm(vec2 p) {
 			float value = 0.0;
 			float amplitude = 0.5;
-			int octaveLimit = uPreviewQuality > 0.5 ? FLOW_OCTAVES : 3;
 
 			for (int i = 0; i < FLOW_OCTAVES; i++) {
-				if (i >= octaveLimit) {
-					break;
-				}
 				value += amplitude * noise(p);
 				p *= 2.0;
 				amplitude *= 0.5;
@@ -417,20 +455,24 @@ const material = new THREE.ShaderMaterial({
 			return centered + 0.5;
 		}
 
+		vec2 frameUv(vec2 uv) {
+			vec2 aspectUv = uv;
+			aspectUv.x *= uFrameAspect;
+			return aspectUv;
+		}
+
 		vec3 sampleBackground(vec2 uv) {
 			if (uHasBackgroundImage > 0.5) {
-				float frameAspect = uResolution.x / max(uResolution.y, 1.0);
-				vec2 imageUv = coverUv(uv, uBackgroundImageAspect, frameAspect);
+				vec2 imageUv = coverUv(uv, uBackgroundImageAspect, uFrameAspect);
 				return toLinear(texture2D(uBackgroundImage, clamp(imageUv, 0.0, 1.0)).rgb);
 			}
 			return toLinear(uBackground);
 		}
 
 		float tafoniCoverageBase(vec2 uv) {
-			vec2 aspectUv = uv;
-			aspectUv.x *= uResolution.x / max(uResolution.y, 1.0);
+			vec2 aspectUv = frameUv(uv);
 
-			vec2 flowUv = aspectUv * uTafoniScale;
+			vec2 flowUv = aspectUv * TAFONI_SCALE + uTafoniOffset;
 			float major = fbm(flowUv + vec2(0.0, 4.1));
 			float secondary = fbm(flowUv * 1.7 + vec2(2.7, 9.2));
 			float ridge = fbm(flowUv * 0.9 + vec2(8.3, 1.4));
@@ -439,24 +481,21 @@ const material = new THREE.ShaderMaterial({
 
 			float body = major * 0.46 + secondary * 0.24 + ridge * 0.18;
 			float cavities = smoothstep(0.22, 0.88, turbulence * 0.65 + ridge * 0.32 + vein * 0.18);
-			float veil = smoothstep(0.08, 0.92, body + cavities * uTafoniDetail * 0.28);
-			float contrast = smoothstep(0.12, 0.92, veil * (0.72 + uTafoniStrength * 0.55));
+			float veil = smoothstep(0.08, 0.92, body + cavities * TAFONI_DETAIL * 0.28);
+			float contrast = smoothstep(0.12, 0.92, veil * (0.72 + TAFONI_STRENGTH * 0.55));
 			float edgeGlow = smoothstep(0.22, 0.86, ridge + turbulence * 0.28);
-			return clamp(mix(contrast, edgeGlow, uTafoniDetail * 0.32), 0.0, 1.0);
+			return clamp(mix(contrast, edgeGlow, TAFONI_DETAIL * 0.32), 0.0, 1.0);
 		}
 
 		float renderTafoniCoverage(vec2 uv) {
-			vec2 blurStep = vec2(1.0 / max(uResolution.x, 1.0), 1.0 / max(uResolution.y, 1.0)) * uTafoniBlur * 10.0;
+			vec2 blurStep = vec2(1.0 / max(uLogicalResolution.x, 1.0), 1.0 / max(uLogicalResolution.y, 1.0)) * TAFONI_BLUR * 10.0;
 			float coverage = tafoniCoverageBase(uv) * 0.227027;
 			coverage += tafoniCoverageBase(uv + vec2( blurStep.x, 0.0)) * 0.1945946;
 			coverage += tafoniCoverageBase(uv + vec2(-blurStep.x, 0.0)) * 0.1945946;
 			coverage += tafoniCoverageBase(uv + vec2(0.0,  blurStep.y)) * 0.1216216;
 			coverage += tafoniCoverageBase(uv + vec2(0.0, -blurStep.y)) * 0.1216216;
-
-			if (uPreviewQuality > 0.5) {
-				coverage += tafoniCoverageBase(uv + blurStep) * 0.0702703;
-				coverage += tafoniCoverageBase(uv - blurStep) * 0.0702703;
-			}
+			coverage += tafoniCoverageBase(uv + blurStep) * 0.0702703;
+			coverage += tafoniCoverageBase(uv - blurStep) * 0.0702703;
 
 			return clamp(coverage, 0.0, 1.0);
 		}
@@ -490,8 +529,7 @@ const material = new THREE.ShaderMaterial({
 		}
 
 		float organicMask(vec2 uv) {
-			vec2 aspectUv = uv;
-			aspectUv.x *= uResolution.x / max(uResolution.y, 1.0);
+			vec2 aspectUv = frameUv(uv);
 
 			vec2 warpSample = vec2(
 				noise(aspectUv * uMaskScale + vec2(3.1, 7.2)),
@@ -566,13 +604,22 @@ const material = new THREE.ShaderMaterial({
 			float coverage = renderTafoniCoverage(vUv);
 			float innerShade = smoothstep(0.16, 0.94, coverage);
 			float highlight = smoothstep(0.54, 1.0, coverage);
+			float tafoniBlend = innerShade * clamp(0.32 + TAFONI_STRENGTH * 0.75, 0.0, 1.0);
+			float maskAlpha = 1.0;
 			vec3 tafoniColor = toLinear(uTafoniColor);
-			vec3 shadedColor = mix(tafoniColor * 0.72, tafoniColor * 1.08, highlight * (0.4 + uTafoniStrength * 0.25));
-			vec3 base = mix(background, shadedColor, innerShade * clamp(0.32 + uTafoniStrength * 0.75, 0.0, 1.0));
+			vec3 shadedColor = mix(tafoniColor * 0.72, tafoniColor * 1.08, highlight * (0.4 + TAFONI_STRENGTH * 0.25));
+			vec3 base = mix(background, shadedColor, tafoniBlend);
 
 			if (uMaskEnabled > 0.5) {
-				float maskAlpha = organicMask(vUv);
+				maskAlpha = organicMask(vUv);
 				base = mix(background, base, maskAlpha);
+			}
+
+			if (uTransparentExport > 0.5) {
+				float exportAlpha = clamp(tafoniBlend * maskAlpha, 0.0, 1.0);
+				vec3 exportColor = toSrgb(shadedColor) * step(0.0001, exportAlpha);
+				gl_FragColor = vec4(exportColor, exportAlpha);
+				return;
 			}
 
 			gl_FragColor = vec4(toSrgb(base), 1.0);
@@ -583,24 +630,21 @@ const material = new THREE.ShaderMaterial({
 const mesh = new THREE.Mesh(geometry, material);
 scene.add(mesh);
 
-const renderer = createRenderer(canvas, { quality: "preview" });
-const previewRenderTarget = new THREE.WebGLRenderTarget(1, 1, {
-	depthBuffer: false,
-	stencilBuffer: false,
-});
-previewRenderTarget.texture.colorSpace = THREE.SRGBColorSpace;
-
-const postScene = new THREE.Scene();
-const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 const postUniforms = {
-	uTexture: { value: previewRenderTarget.texture },
-	uResolution: { value: new THREE.Vector2(1, 1) },
+	uScene: { value: null },
+	uReferenceResolution: {
+		value: new THREE.Vector2(
+			BASE_EXPORT_WIDTH,
+			Math.round(BASE_EXPORT_WIDTH / getSelectedAspect()),
+		),
+	},
 	uDitherEnabled: { value: ditherParams.enabled ? 1 : 0 },
 	uDitherLevels: { value: ditherParams.levels },
 	uDitherStrength: { value: ditherParams.strength },
 	uDitherScale: { value: ditherParams.scale },
-	uBypassDither: { value: 0 },
+	uDitherAlpha: { value: 0 },
 };
+
 const postMaterial = new THREE.ShaderMaterial({
 	uniforms: postUniforms,
 	vertexShader: `
@@ -615,18 +659,18 @@ const postMaterial = new THREE.ShaderMaterial({
 		precision highp float;
 
 		varying vec2 vUv;
-		uniform sampler2D uTexture;
-		uniform vec2 uResolution;
+
+		uniform sampler2D uScene;
+		uniform vec2 uReferenceResolution;
 		uniform float uDitherEnabled;
 		uniform float uDitherLevels;
 		uniform float uDitherStrength;
 		uniform float uDitherScale;
-		uniform float uBypassDither;
+		uniform float uDitherAlpha;
 
-		float bayer4(vec2 fragCoord) {
-			vec2 cell = mod(floor(fragCoord), 4.0);
+		float bayer4(vec2 position) {
+			vec2 cell = mod(floor(position), 4.0);
 			float index = cell.x + cell.y * 4.0;
-
 			if (index < 0.5) return 0.0 / 16.0;
 			if (index < 1.5) return 8.0 / 16.0;
 			if (index < 2.5) return 2.0 / 16.0;
@@ -645,31 +689,38 @@ const postMaterial = new THREE.ShaderMaterial({
 			return 5.0 / 16.0;
 		}
 
-		vec3 quantizeOrdered(vec3 color, float levels, float threshold, float amount) {
-			float steps = max(levels - 1.0, 1.0);
-			float offset = (threshold - 0.5) * amount;
-			return floor(clamp(color + offset, 0.0, 1.0) * steps + 0.5) / steps;
-		}
-
 		void main() {
-			vec3 base = texture2D(uTexture, vUv).rgb;
-
-			if (uBypassDither > 0.5 || uDitherEnabled < 0.5) {
-				gl_FragColor = vec4(base, 1.0);
+			vec4 sceneColor = texture2D(uScene, vUv);
+			if (uDitherEnabled < 0.5) {
+				gl_FragColor = sceneColor;
 				return;
 			}
 
-			float patternScale = max(uDitherScale, 0.25);
-			vec2 fragCoord = vUv * uResolution;
-			float threshold = bayer4(floor(fragCoord / patternScale));
-			float amount = mix(0.03, 0.22, clamp(uDitherStrength, 0.0, 1.0));
-			vec3 quantized = quantizeOrdered(base, max(uDitherLevels, 2.0), threshold, amount);
-			gl_FragColor = vec4(quantized, 1.0);
+			float levels = max(uDitherLevels, 2.0);
+			vec2 fragCoord = vUv * uReferenceResolution;
+			float pattern = bayer4(fragCoord / max(uDitherScale, 0.0001));
+			float threshold = (pattern - 0.5) * (uDitherStrength / levels);
+			vec3 quantized = floor(clamp(sceneColor.rgb + threshold, 0.0, 1.0) * (levels - 1.0) + 0.5) / (levels - 1.0);
+			float alpha = sceneColor.a;
+
+			if (uDitherAlpha > 0.5) {
+				float alphaThreshold = step(pattern, clamp(alpha, 0.0, 1.0));
+				alpha = mix(alpha, alphaThreshold, clamp(uDitherStrength, 0.0, 1.0));
+				if (alpha < 0.0001) {
+					quantized = vec3(0.0);
+				}
+			}
+
+			gl_FragColor = vec4(quantized, alpha);
 		}
 	`,
 });
+
 const postMesh = new THREE.Mesh(geometry, postMaterial);
 postScene.add(postMesh);
+
+const renderer = createRenderer(canvas, { quality: "preview" });
+let previewRenderTarget = null;
 
 let currentThumbnailUrl = "";
 let previewFrameId = 0;
@@ -677,16 +728,20 @@ let previewRenderQueued = false;
 let previewVisible = true;
 let pageVisible = document.visibilityState !== "hidden";
 
-function createRenderer(targetCanvas, { quality = "preview" } = {}) {
+function createRenderer(
+	targetCanvas,
+	{ quality = "preview", transparent = false } = {},
+) {
 	const isExportQuality = quality === "export";
 	const nextRenderer = new THREE.WebGLRenderer({
 		canvas: targetCanvas,
 		antialias: isExportQuality || runtimeProfileName === "editor",
-		alpha: false,
+		alpha: transparent,
 		preserveDrawingBuffer: isExportQuality,
 	});
 
 	nextRenderer.outputColorSpace = THREE.SRGBColorSpace;
+	nextRenderer.setClearColor(0x000000, transparent ? 0 : 1);
 	nextRenderer.setPixelRatio(
 		Math.min(
 			window.devicePixelRatio,
@@ -704,13 +759,26 @@ function setAspectRatio() {
 	previewShell.style.setProperty("--tafoni-aspect", `${getSelectedAspect()}`);
 }
 
+function getReferenceFrameSize(aspect = getSelectedAspect()) {
+	const width = BASE_EXPORT_WIDTH;
+	const height = Math.max(1, Math.round(width / aspect));
+	return { width, height, aspect };
+}
+
+function syncFrameMetricsUniforms() {
+	const { width, height, aspect } = getReferenceFrameSize();
+	uniforms.uFrameAspect.value = aspect;
+	uniforms.uLogicalResolution.value.set(width, height);
+	postUniforms.uReferenceResolution.value.set(width, height);
+}
+
 function syncTafoniUniforms() {
 	uniforms.uBackground.value.set(tafoniParams.background);
-	uniforms.uTafoniColor.value.set(tafoniParams.tafoniColor);
-	uniforms.uTafoniScale.value = tafoniParams.tafoniScale;
-	uniforms.uTafoniStrength.value = tafoniParams.tafoniStrength;
-	uniforms.uTafoniDetail.value = tafoniParams.tafoniDetail;
-	uniforms.uTafoniBlur.value = tafoniParams.tafoniBlur;
+	uniforms.uTafoniColor.value.set(setTafoniColor(tafoniParams.tafoniColor));
+	uniforms.uTafoniOffset.value.set(
+		tafoniGenerationState.offsetX,
+		tafoniGenerationState.offsetY,
+	);
 }
 
 function syncBackgroundImageUniforms() {
@@ -756,9 +824,11 @@ function syncDitherUniforms() {
 	postUniforms.uDitherLevels.value = ditherParams.levels;
 	postUniforms.uDitherStrength.value = ditherParams.strength;
 	postUniforms.uDitherScale.value = ditherParams.scale;
+	postUniforms.uDitherAlpha.value = 0;
 }
 
 function syncUniforms() {
+	syncFrameMetricsUniforms();
 	syncTafoniUniforms();
 	syncBackgroundImageUniforms();
 	syncMaskUniforms();
@@ -767,7 +837,7 @@ function syncUniforms() {
 
 function syncPreviewUniforms() {
 	syncUniforms();
-	uniforms.uPreviewQuality.value = runtimeProfile.previewQuality;
+	uniforms.uTransparentExport.value = 0;
 }
 
 function isPreviewRenderable() {
@@ -781,36 +851,53 @@ function stopPreviewLoop() {
 	}
 }
 
-function renderScene(targetRenderer, options = {}) {
-	const usePreviewPost = options.previewPost === true;
+function ensureRenderTarget(currentTarget, width, height) {
+	if (
+		currentTarget &&
+		currentTarget.width === width &&
+		currentTarget.height === height
+	) {
+		return currentTarget;
+	}
+	currentTarget?.dispose();
+	return new THREE.WebGLRenderTarget(width, height, {
+		depthBuffer: false,
+		stencilBuffer: false,
+		colorSpace: THREE.SRGBColorSpace,
+	});
+}
 
-	if (!usePreviewPost) {
-		targetRenderer.setRenderTarget(null);
+function renderScene(
+	targetRenderer,
+	target = null,
+	{ applyDither = false, intermediateTarget = null } = {},
+) {
+	if (!applyDither) {
+		targetRenderer.setRenderTarget(target);
 		targetRenderer.render(scene, camera);
-		return;
+		return intermediateTarget;
 	}
 
-	const renderTarget = options.renderTarget || previewRenderTarget;
-	const resolution = options.resolution;
-	renderTarget.texture.colorSpace = THREE.SRGBColorSpace;
-	targetRenderer.setRenderTarget(renderTarget);
+	const size = targetRenderer.getDrawingBufferSize(new THREE.Vector2());
+	const ditherTarget = ensureRenderTarget(intermediateTarget, size.x, size.y);
+	postUniforms.uScene.value = ditherTarget.texture;
+
+	// The old “noise texture on top” look came from this separate screen-space post-process pass.
+	// Keeping it optional makes the stylization explicit in preview and export.
+	targetRenderer.setRenderTarget(ditherTarget);
 	targetRenderer.render(scene, camera);
-	targetRenderer.setRenderTarget(null);
-	postUniforms.uTexture.value = renderTarget.texture;
-	if (resolution) {
-		postUniforms.uResolution.value.set(resolution.width, resolution.height);
-	}
-	postUniforms.uBypassDither.value = options.bypassDither ? 1 : 0;
+	targetRenderer.setRenderTarget(target);
 	targetRenderer.render(postScene, postCamera);
+	return ditherTarget;
 }
 
 function renderPreviewFrame() {
 	previewFrameId = 0;
 	previewRenderQueued = false;
 	if (!isPreviewRenderable()) return;
-	renderScene(renderer, {
-		previewPost: true,
-		bypassDither: false,
+	previewRenderTarget = renderScene(renderer, null, {
+		applyDither: ditherParams.enabled,
+		intermediateTarget: previewRenderTarget,
 	});
 }
 
@@ -822,17 +909,12 @@ function requestRender() {
 }
 
 function applyState({
-	refreshPane = false,
 	updateAspect = false,
 	resize = false,
 	syncPreview = true,
 } = {}) {
 	if (updateAspect) {
 		setAspectRatio();
-	}
-
-	if (refreshPane) {
-		pane.refresh();
 	}
 
 	if (resize) {
@@ -856,6 +938,7 @@ function resizeRenderer() {
 	);
 	renderer.setSize(clientWidth, clientHeight, false);
 	uniforms.uResolution.value.set(clientWidth, clientHeight);
+	syncFrameMetricsUniforms();
 	const pixelWidth = Math.max(
 		1,
 		Math.round(clientWidth * renderer.getPixelRatio()),
@@ -864,8 +947,11 @@ function resizeRenderer() {
 		1,
 		Math.round(clientHeight * renderer.getPixelRatio()),
 	);
-	previewRenderTarget.setSize(pixelWidth, pixelHeight);
-	postUniforms.uResolution.value.set(pixelWidth, pixelHeight);
+	previewRenderTarget = ensureRenderTarget(
+		previewRenderTarget,
+		pixelWidth,
+		pixelHeight,
+	);
 	requestRender();
 }
 
@@ -945,7 +1031,6 @@ async function handleImageUpload(file) {
 
 function updatePaneVisibility() {
 	const isMaskEnabled = maskParams.enabled;
-	const isDitherEnabled = ditherParams.enabled;
 
 	maskStyleBinding.hidden = !isMaskEnabled;
 	maskAmountBinding.hidden = !isMaskEnabled;
@@ -953,62 +1038,49 @@ function updatePaneVisibility() {
 	maskEdgeWearBinding.hidden = !isMaskEnabled;
 	maskBreakupBinding.hidden = !isMaskEnabled;
 	maskAdvancedFolder.hidden = !isMaskEnabled;
-
-	ditherLevelsBinding.hidden = !isDitherEnabled;
-	ditherStrengthBinding.hidden = !isDitherEnabled;
-	ditherScaleBinding.hidden = !isDitherEnabled;
 }
 
-async function exportTafoni() {
+async function exportTafoni({ transparent = false } = {}) {
 	const aspect = getSelectedAspect();
 	const exportWidth = BASE_EXPORT_WIDTH * exportParams.scale;
 	const exportHeight = Math.round(exportWidth / aspect);
 	const previousResolution = uniforms.uResolution.value.clone();
-	const previousQuality = uniforms.uPreviewQuality.value;
-	const previousPostTexture = postUniforms.uTexture.value;
-	const previousPostResolution = postUniforms.uResolution.value.clone();
-	const previousBypassDither = postUniforms.uBypassDither.value;
+	const previousTransparentExport = uniforms.uTransparentExport.value;
+	const previousDitherAlpha = postUniforms.uDitherAlpha.value;
 
 	const exportCanvas = document.createElement("canvas");
-	const exportRenderer = createRenderer(exportCanvas, { quality: "export" });
-	const exportRenderTarget = new THREE.WebGLRenderTarget(
-		exportWidth,
-		exportHeight,
-		{
-			depthBuffer: false,
-			stencilBuffer: false,
-		},
-	);
+	const exportRenderer = createRenderer(exportCanvas, {
+		quality: "export",
+		transparent,
+	});
+
+	let exportRenderTarget = null;
 
 	try {
 		exportRenderer.setPixelRatio(EXPORT_PIXEL_RATIO);
 		exportRenderer.setSize(exportWidth, exportHeight, false);
+		exportRenderer.clear();
 		uniforms.uResolution.value.set(exportWidth, exportHeight);
 		syncUniforms();
-		uniforms.uPreviewQuality.value = 1;
-		renderScene(exportRenderer, {
-			previewPost: true,
-			bypassDither: false,
-			renderTarget: exportRenderTarget,
-			resolution: {
-				width: exportWidth,
-				height: exportHeight,
-			},
+		uniforms.uTransparentExport.value = transparent ? 1 : 0;
+		postUniforms.uDitherAlpha.value = transparent ? 1 : 0;
+		exportRenderTarget = renderScene(exportRenderer, null, {
+			applyDither: ditherParams.enabled,
+			intermediateTarget: exportRenderTarget,
 		});
 
 		const link = document.createElement("a");
-		link.download = `tafoni-${exportParams.aspect.toLowerCase()}.png`;
+		const exportSuffix = transparent ? "-transparent" : "";
+		link.download = `tafoni-${exportParams.aspect.toLowerCase()}${exportSuffix}.png`;
 		link.href = exportCanvas.toDataURL("image/png");
 		link.click();
 	} finally {
 		uniforms.uResolution.value.copy(previousResolution);
-		uniforms.uPreviewQuality.value = previousQuality;
-		postUniforms.uTexture.value = previousPostTexture;
-		postUniforms.uResolution.value.copy(previousPostResolution);
-		postUniforms.uBypassDither.value = previousBypassDither;
+		uniforms.uTransparentExport.value = previousTransparentExport;
+		postUniforms.uDitherAlpha.value = previousDitherAlpha;
 		syncPreviewUniforms();
 		requestRender();
-		exportRenderTarget.dispose();
+		exportRenderTarget?.dispose();
 		exportRenderer.dispose();
 	}
 }
@@ -1037,33 +1109,39 @@ tafoniFolder.addBinding(tafoniParams, "background", {
 	view: "color",
 	label: "background",
 });
-tafoniFolder.addBinding(tafoniParams, "tafoniColor", {
-	view: "color",
-	label: "color",
+const tafoniColorBinding = tafoniFolder.addBinding(
+	tafoniParams,
+	"tafoniColor",
+	{
+		view: "color",
+		label: "color",
+	},
+);
+
+const ditherFolder = pane.addFolder({
+	title: "Ordered Dither",
+	expanded: false,
 });
-tafoniFolder.addBinding(tafoniParams, "tafoniScale", {
-	min: 0.6,
-	max: 5,
-	step: 0.05,
-	label: "scale",
+const ditherEnabledBinding = ditherFolder.addBinding(ditherParams, "enabled", {
+	label: "enabled",
 });
-tafoniFolder.addBinding(tafoniParams, "tafoniStrength", {
+ditherFolder.addBinding(ditherParams, "levels", {
+	min: 2,
+	max: 8,
+	step: 1,
+	label: "levels",
+});
+ditherFolder.addBinding(ditherParams, "strength", {
 	min: 0,
 	max: 1,
 	step: 0.01,
 	label: "strength",
 });
-tafoniFolder.addBinding(tafoniParams, "tafoniDetail", {
-	min: 0,
-	max: 1,
-	step: 0.01,
-	label: "detail",
-});
-tafoniFolder.addBinding(tafoniParams, "tafoniBlur", {
-	min: 0,
-	max: 2,
+ditherFolder.addBinding(ditherParams, "scale", {
+	min: 0.5,
+	max: 4,
 	step: 0.05,
-	label: "smooth blur",
+	label: "scale",
 });
 
 const maskFolder = pane.addFolder({ title: "Mask" });
@@ -1114,53 +1192,27 @@ maskAdvancedFolder.addBinding(maskParams, "streaks", {
 	label: "streaks",
 });
 
-const ditherFolder = pane.addFolder({
-	title: "Ordered Dither Preview / Export",
-});
-const ditherEnabledBinding = ditherFolder.addBinding(ditherParams, "enabled", {
-	label: "enabled",
-});
-const ditherLevelsBinding = ditherFolder.addBinding(ditherParams, "levels", {
-	min: 2,
-	max: 8,
-	step: 1,
-	label: "tones",
-});
-const ditherStrengthBinding = ditherFolder.addBinding(
-	ditherParams,
-	"strength",
-	{
-		min: 0,
-		max: 1,
-		step: 0.01,
-		label: "threshold mix",
-	},
-);
-const ditherScaleBinding = ditherFolder.addBinding(ditherParams, "scale", {
-	min: 0.5,
-	max: 4,
-	step: 0.05,
-	label: "pattern scale",
-});
-
-pane.addButton({ title: "Randomize Color" }).on("click", () => {
-	randomizeTafoniColor();
-	applyState({ refreshPane: true });
-});
-
 pane.addButton({ title: "Generate Tafoni" }).on("click", () => {
 	randomizeTafoni();
-	applyState({ refreshPane: true });
+	tafoniColorBinding.refresh();
+	applyState();
 });
 
 pane.addButton({ title: "Set Background Image" }).on("click", () => {
 	imageUpload.click();
 });
 
-pane.addButton({ title: "Export Dithered Tafoni PNG" }).on("click", () => {
+pane.addButton({ title: "Export PNG" }).on("click", () => {
 	exportTafoni().catch((error) => {
 		console.error("Error exporting tafoni:", error);
 		alert("Tafoni export failed. Please try again.");
+	});
+});
+
+pane.addButton({ title: "Export Transparent PNG" }).on("click", () => {
+	exportTafoni({ transparent: true }).catch((error) => {
+		console.error("Error exporting transparent tafoni:", error);
+		alert("Transparent tafoni export failed. Please try again.");
 	});
 });
 
@@ -1174,11 +1226,15 @@ maskEnabledBinding.on("change", () => {
 });
 
 ditherEnabledBinding.on("change", () => {
-	updatePaneVisibility();
 	requestRender();
 });
 
 pane.on("change", () => {
+	const rawColor = tafoniParams.tafoniColor;
+	const sanitizedColor = setTafoniColor(rawColor);
+	if (rawColor !== sanitizedColor) {
+		tafoniColorBinding.refresh();
+	}
 	syncPreviewUniforms();
 	requestRender();
 });
@@ -1219,10 +1275,8 @@ imageDropZone.addEventListener("drop", (event) => {
 });
 
 setAspectRatio();
-randomizeTafoni();
 syncPreviewUniforms();
 updatePaneVisibility();
-pane.refresh();
 
 const resizeObserver = new ResizeObserver(() => {
 	resizeRenderer();

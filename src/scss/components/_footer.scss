@@ -1,7 +1,10 @@
 footer {
-  display: flex;
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: minmax(18rem, 30rem) minmax(0, 1fr);
   align-items: center;
-  justify-content: flex-start;
+  gap: clamp(1.5rem, 3vw, 3rem);
 
   .footer-links {
     display: flex;
@@ -20,7 +23,89 @@ footer {
   }
 
   @media screen and (max-width: 60em) {
+    grid-template-columns: 1fr;
+    gap: var(--padding-s);
     padding-bottom: var(--padding-s);
+  }
+}
+
+.tools-menu {
+  position: relative;
+  width: min(100%, 32rem);
+}
+
+.tools-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  appearance: none;
+  padding: 0;
+  border: 0;
+  color: var(--secondary-color);
+  background: transparent;
+  font-size: 1.1rem;
+  line-height: 1.45;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--accent-color);
+  }
+
+  &:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: 0.3rem;
+  }
+}
+
+.tools-menu__mark {
+  display: inline-block;
+  transition: transform 0.25s ease;
+}
+
+.tools-menu.is-open .tools-menu__mark {
+  transform: rotate(45deg);
+}
+
+.tools-menu__panel {
+  position: absolute;
+  bottom: calc(100% + var(--padding-m));
+  left: 0;
+  width: min(22rem, calc(100vw - (var(--padding-l) * 2)));
+  padding: var(--padding-s) var(--padding-m);
+  border: 1px solid rgba(var(--secondary-color-rgb), 0.3);
+  background: rgba(var(--primary-color-rgb), 0.92);
+  box-shadow: 0 1.25rem 3rem rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(1rem);
+
+  &[hidden] {
+    display: none;
+  }
+
+  a {
+    display: block;
+    padding-block: 0.55rem;
+    color: var(--secondary-color);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(var(--secondary-color-rgb), 0.16);
+    transition:
+      color 0.2s ease,
+      padding-left 0.2s ease;
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    &:hover,
+    &:focus-visible {
+      color: var(--accent-color);
+      padding-left: 0.35rem;
+    }
+
+    &:focus-visible {
+      outline: 1px solid currentColor;
+      outline-offset: -0.2rem;
+    }
   }
 }
 
